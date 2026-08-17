@@ -11,3 +11,5 @@ apscheduler
 
 authlib
 psycopg[binary]
+itsdangerous
+
