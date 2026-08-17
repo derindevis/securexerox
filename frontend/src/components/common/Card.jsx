@@ -1,0 +1,1 @@
+export default function Card({children,hover=true,className='',...props}){return <div className={`ui-card ${hover?'transition-colors duration-200':''} ${className}`} {...props}>{children}</div>}

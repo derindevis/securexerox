@@ -1,0 +1,33 @@
+# Environment & Secrets
+.env
+.env.*
+!.env.example
+
+# Database & Encryption Keys
+*.db
+*.sqlite
+*.sqlite3
+*.key
+*.pem
+*.crt
+
+# Uploads & Runtime Logs
+backend/uploads/
+uploads/
+backend/logs/
+logs/
+
+# Build & Dependency Artifacts
+frontend/node_modules/
+frontend/dist/
+__pycache__/
+.venv/
+venv/
+
+# Ignore test scripts from git tracking (kept locally)
+backend/scripts/test_*.py
+scripts/test_*.py
+
+# Ignore markdown files except root README.md
+*.md
+!README.md

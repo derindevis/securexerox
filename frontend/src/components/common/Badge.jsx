@@ -1,0 +1,1 @@
+export default function Badge({children,pulse=false,dot=false,className=''}){return <span className={`ui-badge ${className}`}>{dot&&<span className={`ui-badge__dot ${pulse?'animate-pulse':''}`}/>} {children}</span>}
