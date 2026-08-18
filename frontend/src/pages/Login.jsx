@@ -40,7 +40,7 @@ export default function Login() {
     sessionStorage.setItem('sx_oauth_role', role);
     const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://wxucnfaeznejprxldcdf.supabase.co';
     const redirectUri = `${window.location.origin}/auth/callback`;
-    window.location.href = `${supabaseUrl}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(redirectUri)}`;
+    window.location.href = `${supabaseUrl}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(redirectUri)}&prompt=select_account`;
   };
 
   /* ── Manual Sign In ── */

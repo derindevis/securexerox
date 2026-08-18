@@ -5,7 +5,7 @@ import { useApp } from '../context/AppContext';
 
 export default function OAuthCallback() {
   const navigate = useNavigate();
-  const { addToast } = useApp();
+  const { addToast, syncAuthUser } = useApp();
   const [errorMsg, setErrorMsg] = useState(null);
 
   useEffect(() => {
@@ -38,7 +38,7 @@ export default function OAuthCallback() {
         // Exchange with backend to obtain app JWT & register/sync user
         const res = await api.googleAuth({ access_token: accessToken, token: accessToken, email, name, role });
         if (res && res.access_token) {
-          setAuthToken(res.access_token);
+          syncAuthUser(res.user, res.access_token);
           addToast('Signed in with Google successfully!', 'success');
           sessionStorage.removeItem('sx_oauth_role');
           const destination = res.user?.role === 'shop' ? '/shop/dashboard' : '/customer/dashboard';
@@ -57,7 +57,7 @@ export default function OAuthCallback() {
     }
 
     processOAuth();
-  }, [navigate, addToast]);
+  }, [navigate, addToast, syncAuthUser]);
 
   return (
     <main className="sx-page">

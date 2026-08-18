@@ -223,6 +223,14 @@ export function AppProvider({ children }) {
     return res.user;
   }, [fetchJobs]);
 
+  const syncAuthUser = useCallback((user, token) => {
+    if (token) setAuthToken(token);
+    if (user) {
+      dispatch({ type: ACTIONS.LOGIN, payload: user });
+      fetchJobs();
+    }
+  }, [fetchJobs]);
+
   const logout = useCallback(() => {
     setAuthToken(null);
     dispatch({ type: ACTIONS.LOGOUT });
@@ -367,6 +375,7 @@ export function AppProvider({ children }) {
     ...state,
     login,
     register,
+    syncAuthUser,
     logout,
     addToast,
     removeToast,
