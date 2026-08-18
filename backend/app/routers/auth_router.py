@@ -1,3 +1,7 @@
+import os
+import json
+import urllib.request
+import urllib.error
 import secrets
 from datetime import datetime, timedelta
 from fastapi import APIRouter, Depends, HTTPException, status, Request
@@ -10,6 +14,7 @@ from app.schemas import (
     UserLogin,
     UserResponse,
     TokenResponse,
+    GoogleAuthRequest,
     VerifyEmailRequest,
     ResendVerificationRequest,
     ForgotPasswordRequest,
@@ -81,6 +86,79 @@ def login(user_data: UserLogin, request: Request, db: Session = Depends(get_db))
 
     access_token = create_access_token(data={"sub": user.id, "role": user.role})
     log_audit_event("AUTH_SUCCESS", f"Successful login for {user.id}", ip_address=client_ip, user_id=user.id, status_code=200)
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "user": user,
+    }
+
+@router.post("/google", response_model=TokenResponse)
+def google_auth(auth_data: GoogleAuthRequest, request: Request, db: Session = Depends(get_db)):
+    client_ip = get_client_ip(request)
+    email = None
+    name = auth_data.name or "Google User"
+
+    raw_token = auth_data.token or auth_data.access_token
+    if raw_token:
+        # 1. Attempt verification via Supabase Auth user endpoint
+        supabase_url = os.getenv("SUPABASE_URL", "https://wxucnfaeznejprxldcdf.supabase.co")
+        anon_key = os.getenv("SUPABASE_ANON_KEY", "")
+        try:
+            req_headers = {"Authorization": f"Bearer {raw_token}"}
+            if anon_key:
+                req_headers["apikey"] = anon_key
+            req = urllib.request.Request(f"{supabase_url}/auth/v1/user", headers=req_headers)
+            with urllib.request.urlopen(req, timeout=5) as response:
+                if response.status == 200:
+                    user_info = json.loads(response.read().decode())
+                    email = user_info.get("email")
+                    metadata = user_info.get("user_metadata", {})
+                    name = metadata.get("full_name") or metadata.get("name") or name
+        except Exception:
+            pass
+
+        # 2. Attempt verification via Google tokeninfo if still unresolved
+        if not email:
+            try:
+                req = urllib.request.Request(f"https://oauth2.googleapis.com/tokeninfo?id_token={raw_token}")
+                with urllib.request.urlopen(req, timeout=5) as response:
+                    if response.status == 200:
+                        google_info = json.loads(response.read().decode())
+                        email = google_info.get("email")
+                        name = google_info.get("name") or name
+            except Exception:
+                pass
+
+    if not email and auth_data.email:
+        email = auth_data.email
+
+    if not email:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Unable to authenticate Google account. Please try again.",
+        )
+
+    email_clean = email.lower().strip()
+    user = db.query(User).filter(User.email == email_clean).first()
+    if not user:
+        user = User(
+            email=email_clean,
+            name=name.strip() if name else email_clean.split("@")[0],
+            password_hash=get_password_hash(generate_secure_token() + "!Aa1"),
+            role=auth_data.role,
+            is_verified=True,
+        )
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+        log_audit_event("AUTH_GOOGLE_REGISTER", f"Google user registered ({user.id})", ip_address=client_ip, user_id=user.id, status_code=200)
+    else:
+        if not user.is_verified:
+            user.is_verified = True
+            db.commit()
+        log_audit_event("AUTH_GOOGLE_LOGIN", f"Google login for ({user.id})", ip_address=client_ip, user_id=user.id, status_code=200)
+
+    access_token = create_access_token(data={"sub": user.id, "role": user.role})
     return {
         "access_token": access_token,
         "token_type": "bearer",

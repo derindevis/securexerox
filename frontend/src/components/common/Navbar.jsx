@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { LogOut, Menu, ShieldCheck, X } from 'lucide-react';
+import { LogOut, Menu, ShieldCheck, X, LogIn, UserPlus } from 'lucide-react';
 import { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 
@@ -10,7 +10,7 @@ export default function Navbar() {
   const [open, setOpen] = useState(false);
 
   const links = !isAuthenticated
-    ? [['Explore', '/'], ['Sign in', '/login']]
+    ? [['Explore', '/']]
     : currentUser?.role === 'customer'
     ? [['Overview', '/customer/dashboard'], ['New print', '/customer/upload'], ['My jobs', '/customer/jobs']]
     : [['Overview', '/shop/dashboard'], ['Verify ID', '/shop/print'], ['Queue', '/shop/queue'], ['History', '/shop/history']];
@@ -39,6 +39,22 @@ export default function Navbar() {
               {label}
             </Link>
           ))}
+          {!isAuthenticated && (
+            <div className="flex items-center gap-2 ml-2">
+              <Link
+                to="/login?mode=signin"
+                className="sx-link inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[var(--line)] hover:bg-[var(--surface)] transition-all text-sm font-semibold"
+              >
+                <LogIn size={13} /> Log In
+              </Link>
+              <Link
+                to="/login?mode=signup"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[var(--ink)] text-[var(--canvas)] hover:opacity-90 transition-all text-sm font-semibold"
+              >
+                <UserPlus size={13} /> Sign Up
+              </Link>
+            </div>
+          )}
           {isAuthenticated && (
             <button onClick={leave} className="sx-link inline-flex items-center gap-1.5">
               <LogOut size={14} /> Leave
@@ -69,6 +85,16 @@ export default function Navbar() {
               {label}
             </Link>
           ))}
+          {!isAuthenticated && (
+            <div className="flex flex-col gap-2 mt-3">
+              <Link onClick={() => setOpen(false)} to="/login?mode=signin" className="sx-link block py-2 font-semibold">
+                Log In
+              </Link>
+              <Link onClick={() => setOpen(false)} to="/login?mode=signup" className="sx-link block py-2 font-semibold">
+                Sign Up
+              </Link>
+            </div>
+          )}
           {isAuthenticated && (
             <button onClick={leave} className="sx-link block py-3">Leave session</button>
           )}

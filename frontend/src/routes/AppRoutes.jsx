@@ -4,6 +4,7 @@ import { useApp } from '../context/AppContext';
 // Pages
 import Landing from '../pages/Landing';
 import Login from '../pages/Login';
+import OAuthCallback from '../pages/OAuthCallback';
 
 // Customer pages
 import CustomerDashboard from '../pages/customer/CustomerDashboard';
@@ -40,6 +41,7 @@ export default function AppRoutes() {
       {/* Public */}
       <Route path="/" element={<Landing />} />
       <Route path="/login" element={<Login />} />
+      <Route path="/auth/callback" element={<OAuthCallback />} />
 
       {/* Customer */}
       <Route

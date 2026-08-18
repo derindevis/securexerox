@@ -54,6 +54,20 @@ class TokenResponse(BaseModel):
     token_type: str = "bearer"
     user: UserResponse
 
+class GoogleAuthRequest(BaseModel):
+    token: Optional[str] = None
+    access_token: Optional[str] = None
+    email: Optional[EmailStr] = None
+    name: Optional[str] = None
+    role: str = "customer"
+
+    @field_validator("role")
+    @classmethod
+    def validate_role(cls, v: str) -> str:
+        if v not in {"customer", "shop"}:
+            raise ValueError("Invalid role specified")
+        return v
+
 class VerifyEmailRequest(BaseModel):
     token: str
 

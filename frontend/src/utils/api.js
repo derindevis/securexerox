@@ -60,6 +60,7 @@ export const api = {
   // Auth
   register: (userData) => request('/auth/register', { method: 'POST', body: JSON.stringify(userData) }),
   login: (credentials) => request('/auth/login', { method: 'POST', body: JSON.stringify(credentials) }),
+  googleAuth: (authData) => request('/auth/google', { method: 'POST', body: JSON.stringify(authData) }),
   getMe: () => request('/auth/me'),
   verifyEmail: (token) => request('/auth/verify-email', { method: 'POST', body: JSON.stringify({ token }) }),
   resendVerification: (email) => request('/auth/resend-verification', { method: 'POST', body: JSON.stringify({ email }) }),
