@@ -251,6 +251,9 @@ export function AppProvider({ children }) {
       formData.append('colorMode', printSettings.colorMode || 'Black & White');
       formData.append('orientation', printSettings.orientation || 'Portrait');
       formData.append('pageRange', printSettings.pageRange || 'All');
+      if (printSettings.shopPublicId) {
+        formData.append('shopPublicId', printSettings.shopPublicId);
+      }
 
       const newJob = await api.createJob(formData);
       dispatch({ type: ACTIONS.ADD_JOB, payload: newJob });

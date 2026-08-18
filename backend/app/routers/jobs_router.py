@@ -46,6 +46,7 @@ async def create_job(
     colorMode: str = Form("Black & White"),
     orientation: str = Form("Portrait"),
     pageRange: str = Form("All"),
+    shopPublicId: Optional[str] = Form(None),
     db: Session = Depends(get_db),
     current_user: User = Depends(require_role("customer")),
 ):
@@ -60,6 +61,24 @@ async def create_job(
         raise HTTPException(status_code=422, detail="Unsupported color mode")
     if orientation not in {"Portrait", "Landscape"}:
         raise HTTPException(status_code=422, detail="Unsupported orientation")
+
+    target_shop_id = None
+    if shopPublicId:
+        clean_shop_id = shopPublicId.strip().upper()
+        target_shop = db.query(User).filter(
+            (User.shop_public_id == clean_shop_id) | (User.id == shopPublicId),
+            User.role == "shop"
+        ).first()
+        if target_shop:
+            target_shop_id = target_shop.id
+            # Validate color capability if shop has printers
+            from app.models import ShopPrinter
+            printers = db.query(ShopPrinter).filter(ShopPrinter.shop_user_id == target_shop.id).all()
+            if printers and colorMode == "Color" and not any(p.printer_color_capable for p in printers):
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Print shop '{target_shop.name}' currently offers Black & White printing only."
+                )
     
     safe_filename = sanitize_filename(fileName)
     safe_pagerange = html.escape(pageRange[:50])
@@ -86,6 +105,7 @@ async def create_job(
     job = PrintJob(
         print_id=print_id,
         user_id=current_user.id,
+        shop_id=target_shop_id,
         file_name=safe_filename,
         file_path=file_path,
         file_type=normalized_type,
@@ -122,6 +142,7 @@ async def create_job(
         completedAt=job.completed_at,
         destroyedAt=job.destroyed_at,
         customerId=job.user_id,
+        shopId=job.shop_id,
     )
 
 @router.get("", response_model=List[PrintJobResponse])

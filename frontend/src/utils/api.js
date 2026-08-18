@@ -88,6 +88,10 @@ export const api = {
   updatePrinter: (printerId, printerData) => request(`/printers/${printerId}`, { method: 'PUT', body: JSON.stringify(printerData) }),
   deletePrinter: (printerId) => request(`/printers/${printerId}`, { method: 'DELETE' }),
   testPrinter: (printerId) => request(`/printers/${printerId}/test`, { method: 'POST' }),
+
+  // Public Shop Discovery & Routing
+  getShopPublicInfo: (publicId) => request(`/shops/public/${publicId}`),
+  getPublicShops: () => request('/shops/public'),
 };
 
 

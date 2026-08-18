@@ -44,6 +44,8 @@ class UserResponse(BaseModel):
     name: str
     role: str
     is_verified: bool = False
+    shopPublicId: Optional[str] = None
+    shopQrPayload: Optional[str] = None
     created_at: datetime
 
     class Config:
@@ -140,6 +142,7 @@ class PrintJobCreate(PrintSettings):
     fileName: str
     fileType: str
     fileSize: int
+    shopPublicId: Optional[str] = None
 
     @field_validator("fileName")
     @classmethod
@@ -174,9 +177,21 @@ class PrintJobResponse(BaseModel):
     completedAt: Optional[datetime] = None
     destroyedAt: Optional[datetime] = None
     customerId: str
+    shopId: Optional[str] = None
 
     class Config:
         from_attributes = True
+
+# Public Shop Discovery & Capability Schemas
+class ShopPublicInfoResponse(BaseModel):
+    id: str
+    shopName: str
+    shopPublicId: str
+    shopQrPayload: Optional[str] = None
+    isOnline: bool = False
+    isColorCapable: bool = False
+    printerCount: int = 0
+    supportedPaperSizes: List[str] = ["A4", "A3", "Letter", "Legal"]
 
 # Session Schemas
 class ViolationRequest(BaseModel):

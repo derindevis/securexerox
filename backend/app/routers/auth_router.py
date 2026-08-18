@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models import User
+from app.models import User, generate_shop_public_id
 from app.schemas import (
     UserRegister,
     UserLogin,
@@ -47,6 +47,9 @@ def register(user_data: UserRegister, request: Request, db: Session = Depends(ge
         raise HTTPException(status_code=400, detail="This email is already registered. Please sign in instead.")
 
     v_token = generate_secure_token()
+    shop_pub_id = generate_shop_public_id() if user_data.role == "shop" else None
+    shop_qr = f"https://securexerox-fhqr.vercel.app/customer/upload?shop={shop_pub_id}" if shop_pub_id else None
+
     user = User(
         email=email_clean,
         password_hash=get_password_hash(user_data.password),
@@ -55,6 +58,8 @@ def register(user_data: UserRegister, request: Request, db: Session = Depends(ge
         is_verified=False,
         verification_token=v_token,
         verification_token_expires_at=datetime.utcnow() + timedelta(hours=24),
+        shop_public_id=shop_pub_id,
+        shop_qr_payload=shop_qr,
     )
     db.add(user)
     db.commit()
@@ -168,12 +173,17 @@ def google_auth(auth_data: GoogleAuthRequest, request: Request, db: Session = De
                 status_code=status.HTTP_409_CONFLICT,
                 detail="This Google account is already registered. Please sign in instead.",
             )
+        shop_pub_id = generate_shop_public_id() if auth_data.role == "shop" else None
+        shop_qr = f"https://securexerox-fhqr.vercel.app/customer/upload?shop={shop_pub_id}" if shop_pub_id else None
+
         user = User(
             email=email_clean,
             name=name.strip() if name else email_clean.split("@")[0],
             password_hash=get_password_hash(generate_secure_token() + "!Aa1"),
             role=auth_data.role,
             is_verified=True,
+            shop_public_id=shop_pub_id,
+            shop_qr_payload=shop_qr,
         )
         db.add(user)
         db.commit()

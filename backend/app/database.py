@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from app.config import settings
@@ -16,6 +16,20 @@ engine = create_engine(db_url, **engine_options)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 Base = declarative_base()
+
+def ensure_schema_migrations():
+    """Idempotently adds missing columns to existing SQLite/Postgres tables."""
+    with engine.connect() as conn:
+        for table, col, col_type in [
+            ("users", "shop_public_id", "VARCHAR"),
+            ("users", "shop_qr_payload", "VARCHAR"),
+            ("print_jobs", "shop_id", "VARCHAR"),
+        ]:
+            try:
+                conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {col} {col_type}"))
+                conn.commit()
+            except Exception:
+                pass
 
 def get_db():
     db = SessionLocal()

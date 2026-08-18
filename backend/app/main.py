@@ -6,13 +6,34 @@ from starlette.middleware.sessions import SessionMiddleware
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 from apscheduler.schedulers.background import BackgroundScheduler
 
-from app.database import engine, Base, SessionLocal
+from app.database import engine, Base, SessionLocal, ensure_schema_migrations
 from app.config import settings
-from app.routers import auth_router, jobs_router, print_router, printer_router
+from app.routers import auth_router, jobs_router, print_router, printer_router, shop_public_router
 from app.storage import cleanup_expired_jobs
+from app.models import User, generate_shop_public_id
 
-# Create DB tables
+# Create DB tables & migrate columns
 Base.metadata.create_all(bind=engine)
+ensure_schema_migrations()
+
+def backfill_shop_public_ids():
+    db = SessionLocal()
+    try:
+        shops = db.query(User).filter(User.role == "shop", User.shop_public_id.is_(None)).all()
+        for shop in shops:
+            pub_id = generate_shop_public_id()
+            while db.query(User).filter(User.shop_public_id == pub_id).first():
+                pub_id = generate_shop_public_id()
+            shop.shop_public_id = pub_id
+            shop.shop_qr_payload = f"https://securexerox-fhqr.vercel.app/customer/upload?shop={pub_id}"
+        db.commit()
+    except Exception:
+        db.rollback()
+    finally:
+        db.close()
+
+# Run backfill
+backfill_shop_public_ids()
 
 scheduler = BackgroundScheduler()
 
@@ -154,6 +175,7 @@ app.include_router(auth_router.router)
 app.include_router(jobs_router.router)
 app.include_router(print_router.router)
 app.include_router(printer_router.router)
+app.include_router(shop_public_router.router)
 
 @app.get("/")
 def root():

@@ -1,4 +1,5 @@
 import uuid
+import secrets
 from datetime import datetime
 from sqlalchemy import Column, String, Integer, DateTime, Boolean, ForeignKey, Text, JSON
 from sqlalchemy.orm import relationship
@@ -6,6 +7,9 @@ from app.database import Base
 
 def generate_uuid():
     return str(uuid.uuid4())
+
+def generate_shop_public_id() -> str:
+    return f"SX-SHOP-{secrets.token_hex(2).upper()}"
 
 class User(Base):
     __tablename__ = "users"
@@ -20,9 +24,14 @@ class User(Base):
     verification_token_expires_at = Column(DateTime, nullable=True)
     reset_token = Column(String, index=True, nullable=True)
     reset_token_expires_at = Column(DateTime, nullable=True)
+    
+    # Permanent Shop Identifier & Standee QR (For shop operators)
+    shop_public_id = Column(String, unique=True, index=True, nullable=True)
+    shop_qr_payload = Column(String, nullable=True)
+    
     created_at = Column(DateTime, default=datetime.utcnow)
 
-    jobs = relationship("PrintJob", back_populates="customer")
+    jobs = relationship("PrintJob", foreign_keys="[PrintJob.user_id]", back_populates="customer")
     printers = relationship("ShopPrinter", back_populates="shop_user", cascade="all, delete-orphan")
 
 class PrintJob(Base):
@@ -31,6 +40,9 @@ class PrintJob(Base):
     id = Column(String, primary_key=True, default=generate_uuid)
     print_id = Column(String, unique=True, index=True, nullable=False)
     user_id = Column(String, ForeignKey("users.id"), nullable=False)
+    
+    # Optional target shop assignment
+    shop_id = Column(String, ForeignKey("users.id"), nullable=True, index=True)
     
     file_name = Column(String, nullable=False)
     file_path = Column(String, nullable=True)
@@ -51,7 +63,8 @@ class PrintJob(Base):
     completed_at = Column(DateTime, nullable=True)
     destroyed_at = Column(DateTime, nullable=True)
 
-    customer = relationship("User", back_populates="jobs")
+    customer = relationship("User", foreign_keys=[user_id], back_populates="jobs")
+    shop = relationship("User", foreign_keys=[shop_id])
     sessions = relationship("PrintSession", back_populates="job", cascade="all, delete-orphan")
 
 class PrintSession(Base):

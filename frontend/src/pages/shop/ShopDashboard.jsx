@@ -1,17 +1,19 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { QRCodeSVG } from 'qrcode.react';
 import {
   ScanLine, ShieldCheck, Printer, Plus, RefreshCw, Trash2, CheckCircle2,
-  AlertTriangle, Server, Palette, Cpu
+  AlertTriangle, Server, Palette, Cpu, QrCode, FileText
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { JOB_STATUS, formatRelativeTime } from '../../utils/constants';
 import PageTransition from '../../components/common/PageTransition';
 import Modal from '../../components/common/Modal';
+import CounterStandeeModal from '../../components/shop/CounterStandeeModal';
 import { api } from '../../utils/api';
 
 export default function ShopDashboard() {
-  const { jobs, addToast } = useApp();
+  const { jobs, currentUser, addToast } = useApp();
   const queue = jobs.filter(j => ['WAITING', 'PRINT_ID_GENERATED', 'SECURE_SESSION', 'PRINTING'].includes(j.status));
   const completed = jobs.filter(j => j.status === JOB_STATUS.DESTROYED);
 
@@ -19,12 +21,16 @@ export default function ShopDashboard() {
   const [loadingPrinters, setLoadingPrinters] = useState(true);
   const [testingId, setTestingId] = useState(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isStandeeModalOpen, setIsStandeeModalOpen] = useState(false);
   const [newPrinter, setNewPrinter] = useState({
     printerName: '',
     printerProtocol: 'socket',
     printerEndpoint: '',
     printerColorCapable: false,
   });
+
+  const shopPublicId = currentUser?.shopPublicId || (currentUser?.id ? `SX-SHOP-${currentUser.id.slice(0, 4).toUpperCase()}` : 'SX-SHOP-DEFAULT');
+  const shopQrUrl = currentUser?.shopQrPayload || `${window.location.origin}/customer/upload?shop=${shopPublicId}`;
 
   const loadPrinters = async () => {
     try {
@@ -122,6 +128,43 @@ export default function ShopDashboard() {
             <div className="sx-stat">
               <strong>{printers.length}</strong>
               <span>Hardware Spoolers</span>
+            </div>
+          </section>
+
+          {/* Permanent Counter QR & Standee Banner */}
+          <section className="sx-section">
+            <div className="p-6 rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-xs flex flex-col md:flex-row items-center justify-between gap-6">
+              <div className="flex items-center gap-5">
+                <div className="p-3 bg-white rounded-xl border border-[var(--line)] shadow-xs shrink-0">
+                  <QRCodeSVG value={shopQrUrl} size={68} level="M" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--emerald)] px-2 py-0.5 rounded-md bg-[var(--emerald-soft)] border border-[var(--emerald)]/20">
+                      Counter QR Active
+                    </span>
+                    <span className="font-mono text-xs font-bold text-[var(--ink)] bg-[var(--surface-muted)] px-2 py-0.5 rounded-md border border-[var(--line)]">
+                      {shopPublicId}
+                    </span>
+                  </div>
+                  <h3 className="text-base font-semibold text-[var(--ink)] mt-1.5" style={{ fontFamily: 'var(--serif)' }}>
+                    Permanent Desk Standee Poster
+                  </h3>
+                  <p className="text-xs text-[var(--ink-muted)] mt-0.5">
+                    Customers scan this counter QR with their mobile camera to immediately route prints to this shop.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3 w-full md:w-auto">
+                <button
+                  type="button"
+                  onClick={() => setIsStandeeModalOpen(true)}
+                  className="sx-button justify-center text-xs py-2.5 px-4 w-full md:w-auto cursor-pointer"
+                >
+                  <Printer size={15} /> Print Desk Standee
+                </button>
+              </div>
             </div>
           </section>
 
@@ -330,6 +373,13 @@ export default function ShopDashboard() {
           </div>
         </form>
       </Modal>
+
+      {/* Counter Standee Modal */}
+      <CounterStandeeModal
+        isOpen={isStandeeModalOpen}
+        onClose={() => setIsStandeeModalOpen(false)}
+        shopUser={currentUser}
+      />
     </PageTransition>
   );
 }
