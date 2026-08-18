@@ -2,15 +2,13 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Shield, ShieldAlert, ShieldOff, ShieldCheck, Printer, Lock,
-  Maximize, AlertTriangle, Eye, FileText, X, RotateCcw,
+  Maximize, AlertTriangle, Eye, FileText, RotateCcw,
   CheckCircle, XCircle, Trash2,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { useCountdown } from '../../utils/timers';
 import { JOB_STATUS } from '../../utils/constants';
-import Button from '../../components/common/Button';
 import CountdownTimer from '../../components/common/CountdownTimer';
-import Badge from '../../components/common/Badge';
 
 import { api } from '../../utils/api';
 
@@ -32,12 +30,11 @@ export default function SecurePrint() {
 
   const job = jobs.find((j) => j.id === jobId);
   const countdown = useCountdown(300, true, () => {
-    // Session expired
     updateJobStatus(jobId, JOB_STATUS.EXPIRED);
     endSecureSession();
     addToast('Session expired', 'warning');
     navigate('/shop/dashboard');
-  }); // 5 min session
+  });
 
   const [showWarning, setShowWarning] = useState(false);
   const [warningLevel, setWarningLevel] = useState(0);
@@ -108,7 +105,6 @@ export default function SecurePrint() {
     };
 
     const handleKeyDown = (e) => {
-      // Block F12, Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+U, Ctrl+S, Ctrl+P, PrintScreen
       if (
         e.key === 'F12' ||
         (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'i' || e.key === 'J' || e.key === 'j')) ||
@@ -142,7 +138,7 @@ export default function SecurePrint() {
     }
   }, [violations, isLocked, jobId, updateJobStatus, addToast]);
 
-  // -- Real hardware printing & document spooling --
+  // -- Real hardware printing --
   const handlePrint = async () => {
     setIsPrinting(true);
     setPrintFailed(false);
@@ -159,7 +155,6 @@ export default function SecurePrint() {
       setPrintStage(2);
       setPrintProgress(90);
 
-      // Trigger system printer via hidden iframe
       const blobUrl = URL.createObjectURL(blob);
       const printIframe = document.createElement('iframe');
       printIframe.style.position = 'fixed';
@@ -193,7 +188,6 @@ export default function SecurePrint() {
       updateJobStatus(jobId, JOB_STATUS.COMPLETED, { completedAt: new Date().toISOString() });
       addToast('Document sent to printer successfully!', 'success');
 
-      // Immediately trigger zero-byte shredding and destruction sequence
       setTimeout(() => startDestructionSequence(), 1500);
     } catch (err) {
       console.error('Print spooler error:', err);
@@ -228,31 +222,17 @@ export default function SecurePrint() {
   // -- Destruction animation sequence --
   const startDestructionSequence = async () => {
     setShowDestruction(true);
-
-    // Step 1: Print completed
     setDestructionStep(1);
     await new Promise((r) => setTimeout(r, 1500));
-
-    // Step 2: Access revoked
     setDestructionStep(2);
     updateJobStatus(jobId, JOB_STATUS.ACCESS_REVOKED);
     await new Promise((r) => setTimeout(r, 1500));
-
-    // Step 3: Print ID invalidated
     setDestructionStep(3);
     await new Promise((r) => setTimeout(r, 1500));
-
-    // Step 4: Document removed on backend & zero-byte shredded
     setDestructionStep(4);
-    try {
-      await api.destroyDocument(jobId);
-    } catch (e) {
-      console.error('Backend document destruction error:', e);
-    }
+    try { await api.destroyDocument(jobId); } catch (e) { console.error('Backend document destruction error:', e); }
     updateJobStatus(jobId, JOB_STATUS.DESTROYED, { destroyedAt: new Date().toISOString(), expiresAt: null });
     await new Promise((r) => setTimeout(r, 2000));
-
-    // Step 5: Complete
     setDestructionStep(5);
     endSecureSession();
   };
@@ -266,35 +246,43 @@ export default function SecurePrint() {
 
   if (!job) {
     return (
-      <div className="min-h-screen bg-[var(--color-navy-950)] flex items-center justify-center">
-        <p className="text-gray-400">Session not found</p>
+      <div className="min-h-screen bg-[var(--canvas)] flex items-center justify-center">
+        <p className="text-[var(--ink-secondary)]">Session not found</p>
       </div>
     );
   }
 
+  // Destruction step configs for light mode
+  const destructionSteps = [
+    { step: 1, icon: CheckCircle, label: 'Printing Completed ✓', desc: 'Document printed successfully', color: 'var(--emerald)', soft: 'var(--emerald-soft)' },
+    { step: 2, icon: Lock, label: 'Access Revoked ✓', desc: 'Document is no longer viewable', color: 'var(--amber)', soft: 'var(--amber-soft)' },
+    { step: 3, icon: XCircle, label: 'Print ID Invalidated ✓', desc: 'ID can never be reused', color: 'var(--danger)', soft: 'var(--danger-soft)' },
+    { step: 4, icon: Trash2, label: 'Document Removed ✓', desc: 'All temporary data permanently deleted', color: 'var(--ink)', soft: 'var(--sage)' },
+  ];
+
   return (
     <div
       ref={containerRef}
-      className="min-h-screen bg-[var(--color-navy-950)] flex flex-col relative overflow-hidden"
+      className="min-h-screen bg-[var(--canvas)] flex flex-col relative overflow-hidden"
     >
       {/* Security Status Bar */}
       <div className={`flex items-center justify-between px-6 py-3 border-b ${
         isLocked
-          ? 'bg-red-500/10 border-red-500/30'
+          ? 'bg-[var(--danger-soft)] border-[var(--danger)]/20'
           : printComplete || showDestruction
-          ? 'bg-green-500/10 border-green-500/30'
-          : 'bg-[var(--color-navy-900)] border-white/5'
+          ? 'bg-[var(--emerald-soft)] border-[var(--emerald)]/20'
+          : 'bg-[var(--surface)] border-[var(--line)]'
       }`}>
         <div className="flex items-center gap-3">
           {isLocked ? (
-            <ShieldOff className="w-5 h-5 text-red-400" />
+            <ShieldOff className="w-5 h-5 text-[var(--danger)]" />
           ) : showDestruction ? (
-            <ShieldCheck className="w-5 h-5 text-green-400 shield-pulse" />
+            <ShieldCheck className="w-5 h-5 text-[var(--emerald)]" />
           ) : (
-            <Shield className="w-5 h-5 text-green-400 shield-pulse" />
+            <Shield className="w-5 h-5 text-[var(--emerald)]" />
           )}
           <span className={`text-sm font-semibold ${
-            isLocked ? 'text-red-400' : showDestruction ? 'text-green-400' : 'text-green-400'
+            isLocked ? 'text-[var(--danger)]' : 'text-[var(--emerald)]'
           }`}>
             {isLocked
               ? '🔴 Session Locked'
@@ -308,22 +296,23 @@ export default function SecurePrint() {
         <div className="flex items-center gap-4">
           {/* Violation counter */}
           <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold ${
-            violations === 0 ? 'bg-green-500/10 text-green-400' :
-            violations === 1 ? 'bg-yellow-500/10 text-yellow-400' :
-            violations === 2 ? 'bg-orange-500/10 text-orange-400' :
-            'bg-red-500/10 text-red-400'
+            violations === 0 ? 'bg-[var(--emerald-soft)] text-[var(--emerald)]' :
+            violations === 1 ? 'bg-[var(--amber-soft)] text-[var(--amber)]' :
+            violations === 2 ? 'bg-[var(--amber-soft)] text-[var(--amber)]' :
+            'bg-[var(--danger-soft)] text-[var(--danger)]'
           }`}>
             <Eye className="w-3.5 h-3.5" />
             {violations}/3 Violations
           </div>
 
           {/* Fullscreen indicator */}
-          <Badge color={isFullscreen ? 'green' : 'yellow'} size="sm" dot>
+          <span className={`sx-badge ${isFullscreen ? 'sx-badge--success' : 'sx-badge--warning'}`}>
+            <span className="sx-badge__dot" />
             {isFullscreen ? 'Fullscreen' : 'Windowed'}
-          </Badge>
+          </span>
 
           {!isFullscreen && !isLocked && !showDestruction && (
-            <button onClick={enterFullscreen} className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer">
+            <button onClick={enterFullscreen} className="p-1.5 rounded-lg text-[var(--ink-muted)] hover:text-[var(--ink)] hover:bg-black/5 transition-colors cursor-pointer">
               <Maximize className="w-4 h-4" />
             </button>
           )}
@@ -334,109 +323,67 @@ export default function SecurePrint() {
       <div className="flex-1 flex items-center justify-center p-6">
         {/* LOCKED STATE */}
         {isLocked && !showDestruction && (
-          <div className="text-center max-w-md" style={{ animation: 'scaleIn 0.3s ease-out' }}>
-            <div className="w-20 h-20 rounded-full bg-red-500/15 flex items-center justify-center mx-auto mb-6" style={{ animation: 'alertPulse 1.5s ease-in-out infinite' }}>
-              <ShieldOff className="w-10 h-10 text-red-400" />
+          <div className="text-center max-w-md" style={{ animation: 'sxSlideUp 0.3s var(--ease-out-expo)' }}>
+            <div className="w-20 h-20 rounded-full bg-[var(--danger-soft)] flex items-center justify-center mx-auto mb-6">
+              <ShieldOff className="w-10 h-10 text-[var(--danger)]" />
             </div>
-            <h2 className="text-2xl font-bold text-red-400 mb-3">Session Locked</h2>
-            <p className="text-gray-400 mb-2">
+            <h2 className="text-2xl font-bold text-[var(--danger)] mb-3">Session Locked</h2>
+            <p className="text-[var(--ink-secondary)] mb-2">
               This session has been locked due to multiple security violations.
             </p>
-            <p className="text-sm text-gray-500 mb-8">
+            <p className="text-sm text-[var(--ink-muted)] mb-8">
               The customer will need to generate a new Print ID.
             </p>
-            <Button variant="secondary" onClick={handleExit}>
+            <button className="sx-button sx-button--ghost" onClick={handleExit}>
               Return to Dashboard
-            </Button>
+            </button>
           </div>
         )}
 
         {/* DESTRUCTION ANIMATION */}
         {showDestruction && (
-          <div className="text-center max-w-lg" style={{ animation: 'fadeIn 0.5s ease-out' }}>
-            <div className="space-y-6 mb-8">
-              {/* Step 1 */}
-              <div className={`flex items-center gap-4 p-4 rounded-xl transition-all duration-500 ${
-                destructionStep >= 1 ? 'bg-green-500/5 border border-green-500/20' : 'opacity-20'
-              }`} style={destructionStep >= 1 ? { animation: 'fadeInUp 0.5s ease-out' } : {}}>
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                  destructionStep >= 1 ? 'bg-green-500/20' : 'bg-white/5'
-                }`}>
-                  <CheckCircle className={`w-5 h-5 ${destructionStep >= 1 ? 'text-green-400' : 'text-gray-600'}`} />
+          <div className="text-center max-w-lg" style={{ animation: 'sxFadeIn 0.5s var(--ease-out-expo)' }}>
+            <div className="space-y-4 mb-8">
+              {destructionSteps.map(({ step, icon: Icon, label, desc, color, soft }) => (
+                <div
+                  key={step}
+                  className={`flex items-center gap-4 p-4 rounded-xl transition-all duration-500 ${
+                    destructionStep >= step ? 'border' : 'opacity-20'
+                  }`}
+                  style={destructionStep >= step
+                    ? { borderColor: `${color}30`, background: soft, animation: 'sxSlideUp 0.5s var(--ease-out-expo)' }
+                    : {}
+                  }
+                >
+                  <div
+                    className="w-10 h-10 rounded-full flex items-center justify-center"
+                    style={{ background: destructionStep >= step ? soft : 'var(--sage)' }}
+                  >
+                    <Icon className="w-5 h-5" style={{ color: destructionStep >= step ? color : 'var(--ink-muted)' }} />
+                  </div>
+                  <div className="text-left">
+                    <p className="font-semibold text-sm" style={{ color: destructionStep >= step ? color : 'var(--ink-muted)' }}>
+                      {label}
+                    </p>
+                    <p className="text-xs text-[var(--ink-muted)]">{desc}</p>
+                  </div>
                 </div>
-                <div className="text-left">
-                  <p className={`font-semibold ${destructionStep >= 1 ? 'text-green-400' : 'text-gray-600'}`}>
-                    Printing Completed ✓
-                  </p>
-                  <p className="text-xs text-gray-500">Document printed successfully</p>
-                </div>
-              </div>
-
-              {/* Step 2 */}
-              <div className={`flex items-center gap-4 p-4 rounded-xl transition-all duration-500 ${
-                destructionStep >= 2 ? 'bg-orange-500/5 border border-orange-500/20' : 'opacity-20'
-              }`} style={destructionStep >= 2 ? { animation: 'fadeInUp 0.5s ease-out' } : {}}>
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                  destructionStep >= 2 ? 'bg-orange-500/20' : 'bg-white/5'
-                }`}>
-                  <Lock className={`w-5 h-5 ${destructionStep >= 2 ? 'text-orange-400' : 'text-gray-600'}`} />
-                </div>
-                <div className="text-left">
-                  <p className={`font-semibold ${destructionStep >= 2 ? 'text-orange-400' : 'text-gray-600'}`}>
-                    Access Revoked ✓
-                  </p>
-                  <p className="text-xs text-gray-500">Document is no longer viewable</p>
-                </div>
-              </div>
-
-              {/* Step 3 */}
-              <div className={`flex items-center gap-4 p-4 rounded-xl transition-all duration-500 ${
-                destructionStep >= 3 ? 'bg-red-500/5 border border-red-500/20' : 'opacity-20'
-              }`} style={destructionStep >= 3 ? { animation: 'fadeInUp 0.5s ease-out' } : {}}>
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                  destructionStep >= 3 ? 'bg-red-500/20' : 'bg-white/5'
-                }`}>
-                  <XCircle className={`w-5 h-5 ${destructionStep >= 3 ? 'text-red-400' : 'text-gray-600'}`} />
-                </div>
-                <div className="text-left">
-                  <p className={`font-semibold ${destructionStep >= 3 ? 'text-red-400' : 'text-gray-600'}`}>
-                    Print ID Invalidated ✓
-                  </p>
-                  <p className="text-xs text-gray-500">ID can never be reused</p>
-                </div>
-              </div>
-
-              {/* Step 4 — THE BIG ONE */}
-              <div className={`flex items-center gap-4 p-4 rounded-xl transition-all duration-500 ${
-                destructionStep >= 4 ? 'bg-purple-500/5 border border-purple-500/20' : 'opacity-20'
-              }`} style={destructionStep >= 4 ? { animation: 'fadeInUp 0.5s ease-out' } : {}}>
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                  destructionStep >= 4 ? 'bg-purple-500/20' : 'bg-white/5'
-                }`}>
-                  <Trash2 className={`w-5 h-5 ${destructionStep >= 4 ? 'text-purple-400' : 'text-gray-600'}`} />
-                </div>
-                <div className="text-left">
-                  <p className={`font-semibold ${destructionStep >= 4 ? 'text-purple-400' : 'text-gray-600'}`}>
-                    Document Removed ✓
-                  </p>
-                  <p className="text-xs text-gray-500">All temporary data permanently deleted</p>
-                </div>
-              </div>
+              ))}
             </div>
 
             {/* Final message */}
             {destructionStep >= 5 && (
-              <div style={{ animation: 'fadeInUp 0.5s ease-out' }}>
-                <div className="p-6 rounded-2xl bg-green-500/5 border border-green-500/20 mb-6">
-                  <ShieldCheck className="w-12 h-12 text-green-400 mx-auto mb-3 shield-pulse" />
-                  <h3 className="text-xl font-bold text-green-400 mb-2">Document Lifecycle Complete</h3>
-                  <p className="text-gray-400 text-sm">
+              <div style={{ animation: 'sxSlideUp 0.5s var(--ease-out-expo)' }}>
+                <div className="p-6 rounded-2xl bg-[var(--emerald-soft)] border border-[var(--emerald)]/20 mb-6">
+                  <ShieldCheck className="w-12 h-12 text-[var(--emerald)] mx-auto mb-3" />
+                  <h3 className="text-xl font-bold text-[var(--emerald)] mb-2">Document Lifecycle Complete</h3>
+                  <p className="text-[var(--ink-secondary)] text-sm">
                     The customer's document is no longer stored anywhere. The print session is complete.
                   </p>
                 </div>
-                <Button onClick={handleExit} size="lg">
+                <button className="sx-button sx-button--lg" onClick={handleExit}>
                   Return to Dashboard
-                </Button>
+                </button>
               </div>
             )}
           </div>
@@ -448,31 +395,28 @@ export default function SecurePrint() {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {/* Document preview */}
               <div className="lg:col-span-2">
-                <div className="glass p-6 h-full">
-                  <h3 className="text-sm font-semibold text-gray-400 mb-4 flex items-center gap-2">
+                <div className="sx-panel h-full">
+                  <h3 className="text-sm font-semibold text-[var(--ink-secondary)] mb-4 flex items-center gap-2">
                     <FileText className="w-4 h-4" /> Document Preview
                   </h3>
 
-                  {/* Simulated document preview */}
-                  <div className={`relative aspect-[3/4] rounded-xl bg-white/[0.03] border border-white/5 flex items-center justify-center overflow-hidden ${
+                  <div className={`relative aspect-[3/4] rounded-xl bg-[var(--sage)] border border-[var(--line)] flex items-center justify-center overflow-hidden ${
                     isPrinting ? 'opacity-50' : ''
                   }`}>
                     {job.filePreview ? (
                       <img src={job.filePreview} alt="Document" className="w-full h-full object-contain p-4" />
                     ) : (
                       <div className="text-center p-8">
-                        <FileText className="w-16 h-16 text-gray-700 mx-auto mb-4" />
-                        <p className="text-gray-500 font-medium">{job.fileName}</p>
-                        <p className="text-xs text-gray-600 mt-1">{job.fileType.toUpperCase()} Document</p>
-                        <p className="text-xs text-gray-700 mt-4">[Document content secured]</p>
+                        <FileText className="w-16 h-16 text-[var(--ink-muted)] mx-auto mb-4" />
+                        <p className="text-[var(--ink-secondary)] font-medium">{job.fileName}</p>
+                        <p className="text-xs text-[var(--ink-muted)] mt-1">{job.fileType.toUpperCase()} Document</p>
+                        <p className="text-xs text-[var(--ink-muted)] mt-4">[Document content secured]</p>
                       </div>
                     )}
 
                     {/* Watermark overlay */}
-                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-10">
-                      <div className="transform -rotate-45 text-4xl font-black text-blue-400 tracking-widest">
-                        SECURE PRINT
-                      </div>
+                    <div className="sx-watermark">
+                      <span>SECURE PRINT</span>
                     </div>
                   </div>
                 </div>
@@ -481,8 +425,8 @@ export default function SecurePrint() {
               {/* Controls sidebar */}
               <div className="space-y-4">
                 {/* Countdown */}
-                <div className="glass p-4 text-center">
-                  <p className="text-xs uppercase tracking-widest text-gray-500 mb-3">Session Time</p>
+                <div className="sx-panel text-center">
+                  <p className="text-xs uppercase tracking-widest text-[var(--ink-muted)] mb-3">Session Time</p>
                   <CountdownTimer
                     seconds={countdown.seconds}
                     totalSeconds={300}
@@ -492,70 +436,65 @@ export default function SecurePrint() {
                 </div>
 
                 {/* Print Settings */}
-                <div className="glass p-4">
-                  <h4 className="text-xs uppercase tracking-widest text-gray-500 mb-3">Print Settings</h4>
+                <div className="sx-panel">
+                  <h4 className="text-xs uppercase tracking-widest text-[var(--ink-muted)] mb-3">Print Settings</h4>
                   <div className="space-y-2 text-xs">
-                    <div className="flex justify-between">
-                      <span className="text-gray-500">Copies</span>
-                      <span className="text-white font-medium">{job.copies}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-500">Paper</span>
-                      <span className="text-white font-medium">{job.paperSize}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-500">Color</span>
-                      <span className="text-white font-medium">{job.colorMode}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-500">Orientation</span>
-                      <span className="text-white font-medium">{job.orientation}</span>
-                    </div>
+                    {[
+                      ['Copies', job.copies],
+                      ['Paper', job.paperSize],
+                      ['Color', job.colorMode],
+                      ['Orientation', job.orientation],
+                    ].map(([label, value]) => (
+                      <div key={label} className="flex justify-between">
+                        <span className="text-[var(--ink-muted)]">{label}</span>
+                        <span className="text-[var(--ink)] font-medium">{value}</span>
+                      </div>
+                    ))}
                   </div>
                 </div>
 
                 {/* Print Progress */}
                 {isPrinting && (
-                  <div className="glass p-4" style={{ animation: 'fadeIn 0.3s ease-out' }}>
-                    <h4 className="text-xs uppercase tracking-widest text-gray-500 mb-3">Printing</h4>
+                  <div className="sx-panel" style={{ animation: 'sxFadeIn 0.3s var(--ease-out-expo)' }}>
+                    <h4 className="text-xs uppercase tracking-widest text-[var(--ink-muted)] mb-3">Printing</h4>
                     <div className="space-y-2">
-                      <p className="text-sm text-blue-400 font-medium animate-pulse">
+                      <p className="text-sm text-[var(--blue)] font-medium animate-pulse">
                         {PRINT_STAGES[printStage]?.label || 'Initializing...'}
                       </p>
-                      <div className="h-2 rounded-full bg-white/5 overflow-hidden">
+                      <div className="h-2 rounded-full bg-[var(--sage)] overflow-hidden">
                         <div
-                          className="h-full bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full transition-all duration-1000 ease-out"
+                          className="h-full bg-[var(--blue)] rounded-full transition-all duration-1000 ease-out"
                           style={{ width: `${printProgress}%` }}
                         />
                       </div>
-                      <p className="text-xs text-gray-500 text-right">{printProgress}%</p>
+                      <p className="text-xs text-[var(--ink-muted)] text-right">{printProgress}%</p>
                     </div>
                   </div>
                 )}
 
                 {/* Print Failed */}
                 {printFailed && (
-                  <div className="glass p-4 border-red-500/20" style={{ animation: 'fadeIn 0.3s ease-out' }}>
+                  <div className="sx-panel !border-[var(--danger)]/20" style={{ animation: 'sxFadeIn 0.3s var(--ease-out-expo)' }}>
                     <div className="flex items-center gap-2 mb-2">
-                      <AlertTriangle className="w-4 h-4 text-red-400" />
-                      <p className="text-sm font-semibold text-red-400">Print Failed</p>
+                      <AlertTriangle className="w-4 h-4 text-[var(--danger)]" />
+                      <p className="text-sm font-semibold text-[var(--danger)]">Print Failed</p>
                     </div>
-                    <p className="text-xs text-gray-500 mb-3">Printer unavailable. Please check the connection.</p>
-                    <Button size="sm" fullWidth icon={RotateCcw} onClick={handleRetry}>
-                      Retry Print
-                    </Button>
+                    <p className="text-xs text-[var(--ink-muted)] mb-3">Printer unavailable. Please check the connection.</p>
+                    <button className="sx-button sx-button--sm w-full" onClick={handleRetry}>
+                      <RotateCcw size={14} /> Retry Print
+                    </button>
                   </div>
                 )}
 
                 {/* Print Button */}
                 {!isPrinting && !printComplete && !printFailed && (
                   <div className="space-y-2">
-                    <Button fullWidth size="lg" icon={Printer} onClick={handlePrint}>
-                      Print Document
-                    </Button>
-                    <Button fullWidth size="sm" variant="ghost" onClick={handleSimulateFailure} className="!text-xs">
+                    <button className="sx-button sx-button--lg w-full" onClick={handlePrint}>
+                      <Printer size={16} /> Print Document
+                    </button>
+                    <button className="sx-button sx-button--ghost sx-button--sm w-full" onClick={handleSimulateFailure}>
                       Simulate Failure (Demo)
-                    </Button>
+                    </button>
                   </div>
                 )}
               </div>
@@ -567,39 +506,35 @@ export default function SecurePrint() {
       {/* Security Warning Overlay */}
       {showWarning && !isLocked && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm"
-          style={{ animation: 'fadeIn 0.2s ease-out' }}
+          className="fixed inset-0 z-50 flex items-center justify-center"
+          style={{ background: 'rgba(247, 245, 240, 0.85)', backdropFilter: 'blur(8px)', animation: 'sxFadeIn 0.2s var(--ease-out-expo)' }}
         >
           <div
-            className={`max-w-md w-full mx-4 p-8 rounded-2xl text-center ${
-              violations >= 3
-                ? 'bg-[var(--color-navy-900)] border-2 border-red-500'
-                : violations >= 2
-                ? 'bg-[var(--color-navy-900)] border-2 border-orange-500'
-                : 'bg-[var(--color-navy-900)] border-2 border-yellow-500'
+            className={`max-w-md w-full mx-4 p-8 rounded-2xl text-center bg-[var(--surface)] border-2 ${
+              violations >= 3 ? 'border-[var(--danger)]' : violations >= 2 ? 'border-[var(--amber)]' : 'border-[var(--amber)]'
             }`}
-            style={{ animation: 'scaleIn 0.25s ease-out' }}
+            style={{ animation: 'sxSlideUp 0.25s var(--ease-out-expo)', boxShadow: 'var(--shadow-xl)' }}
           >
             <div className={`w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center ${
-              violations >= 3 ? 'bg-red-500/15' : violations >= 2 ? 'bg-orange-500/15' : 'bg-yellow-500/15'
-            }`} style={{ animation: 'alertPulse 1s ease-in-out infinite' }}>
+              violations >= 3 ? 'bg-[var(--danger-soft)]' : 'bg-[var(--amber-soft)]'
+            }`}>
               <ShieldAlert className={`w-8 h-8 ${
-                violations >= 3 ? 'text-red-400' : violations >= 2 ? 'text-orange-400' : 'text-yellow-400'
+                violations >= 3 ? 'text-[var(--danger)]' : 'text-[var(--amber)]'
               }`} />
             </div>
 
             <h3 className={`text-xl font-bold mb-2 ${
-              violations >= 3 ? 'text-red-400' : violations >= 2 ? 'text-orange-400' : 'text-yellow-400'
+              violations >= 3 ? 'text-[var(--danger)]' : 'text-[var(--amber)]'
             }`}>
               Security Warning
             </h3>
 
-            <p className="text-gray-400 text-sm mb-2">
+            <p className="text-[var(--ink-secondary)] text-sm mb-2">
               Secure Print Mode was interrupted.
             </p>
 
             <p className={`text-sm font-semibold mb-6 ${
-              violations >= 3 ? 'text-red-400' : violations >= 2 ? 'text-orange-400' : 'text-yellow-400'
+              violations >= 3 ? 'text-[var(--danger)]' : 'text-[var(--amber)]'
             }`}>
               {violations >= 3
                 ? 'Session will be locked.'
@@ -615,23 +550,23 @@ export default function SecurePrint() {
                   key={v}
                   className={`w-3 h-3 rounded-full ${
                     v <= violations
-                      ? v >= 3 ? 'bg-red-500' : v >= 2 ? 'bg-orange-500' : 'bg-yellow-500'
-                      : 'bg-white/10'
+                      ? v >= 3 ? 'bg-[var(--danger)]' : 'bg-[var(--amber)]'
+                      : 'bg-[var(--line)]'
                   }`}
                 />
               ))}
-              <span className="text-xs text-gray-500 ml-2">{violations}/3</span>
+              <span className="text-xs text-[var(--ink-muted)] ml-2">{violations}/3</span>
             </div>
 
-            <Button
-              fullWidth
+            <button
+              className="sx-button w-full"
               onClick={() => {
                 setShowWarning(false);
                 enterFullscreen();
               }}
             >
               Return to Session
-            </Button>
+            </button>
           </div>
         </div>
       )}

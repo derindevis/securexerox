@@ -26,7 +26,7 @@ export default function CountdownTimer({
           cy={size / 2}
           r={radius}
           fill="none"
-          stroke="rgba(255,255,255,0.06)"
+          stroke="rgba(0,0,0,0.06)"
           strokeWidth={strokeWidth}
         />
         {/* Progress ring */}
@@ -47,12 +47,12 @@ export default function CountdownTimer({
         <span
           className={`font-mono font-bold ${
             size >= 120 ? 'text-2xl' : size >= 80 ? 'text-lg' : 'text-sm'
-          } ${progress <= 0.2 ? 'text-red-400' : progress <= 0.5 ? 'text-yellow-400' : 'text-white'}`}
+          } ${progress <= 0.2 ? 'text-[var(--danger)]' : progress <= 0.5 ? 'text-[var(--amber)]' : 'text-[var(--ink)]'}`}
         >
           {display}
         </span>
         {size >= 100 && (
-          <span className="text-[10px] text-gray-500 uppercase tracking-wider mt-0.5">
+          <span className="text-[10px] text-[var(--ink-muted)] uppercase tracking-wider mt-0.5">
             remaining
           </span>
         )}

@@ -1,2 +1,93 @@
-import { useParams,Link } from 'react-router-dom';import { Check,Copy,ArrowRight,Clock } from 'lucide-react';import { useState } from 'react';import { QRCodeSVG } from 'qrcode.react';import { useApp } from '../../context/AppContext';import { useCountdown } from '../../utils/timers';import PageTransition from '../../components/common/PageTransition';
-export default function PrintIDPage(){const {jobId}=useParams();const {jobs}=useApp();const [copied,setCopied]=useState(false);const job=jobs.find(j=>j.id===jobId);const time=useCountdown(600,true);const copy=async()=>{await navigator.clipboard.writeText(job.printId);setCopied(true);setTimeout(()=>setCopied(false),1600)};if(!job)return <main className="vault-page"><div className="vault-wrap">Job not found.</div></main>;return <PageTransition><main className="vault-page"><div className="vault-wrap"><p className="vault-kicker">Access created</p><h1 className="vault-title !text-[clamp(2.5rem,5vw,4.7rem)]">Give the shop<br/><em>only this.</em></h1><div className="vault-grid mt-10"><section className="vault-panel--paper vault-panel col-span-12 lg:col-span-8"><p className="vault-kicker !text-slate-500">Temporary Print ID</p><p className="vault-id mt-6 !text-[clamp(2rem,6vw,4.8rem)] !text-[var(--ink)]">{job.printId}</p><button onClick={copy} className="vault-button mt-8">{copied?<Check size={16}/>:<Copy size={16}/>}{copied?'Copied':'Copy Print ID'}</button><div className="mt-10 border-t border-slate-300 pt-6"><p className="text-sm leading-7 text-slate-600">Share this ID verbally or show the QR code. Do not share the original file with the shop.</p></div></section><aside className="vault-panel col-span-12 lg:col-span-4 text-center"><Clock className="mx-auto text-[var(--lime)]"/><p className="mt-4 text-sm text-slate-400">Access window</p><p className="mt-2 font-serif text-5xl text-[var(--paper)]">{String(Math.floor(time.seconds/60)).padStart(2,'0')}:{String(time.seconds%60).padStart(2,'0')}</p><div className="mt-7 inline-block bg-white p-3"><QRCodeSVG value={job.printId} size={132}/></div></aside><section className="vault-panel col-span-12"><p className="vault-kicker">Next</p><div className="mt-4 grid gap-5 md:grid-cols-3 text-sm text-slate-300"><p><b className="text-[var(--lime)]">01</b><br/>Give the operator this Print ID.</p><p><b className="text-[var(--lime)]">02</b><br/>They start a purpose-limited print session.</p><p><b className="text-[var(--lime)]">03</b><br/>Follow the documented closure of the job.</p></div><Link to={`/customer/jobs/${job.id}`} className="vault-button vault-button--quiet mt-7">Track job <ArrowRight size={16}/></Link></section></div></div></main></PageTransition>}
+import { useParams, Link } from 'react-router-dom';
+import { Check, Copy, ArrowRight, Clock } from 'lucide-react';
+import { useState } from 'react';
+import { QRCodeSVG } from 'qrcode.react';
+import { useApp } from '../../context/AppContext';
+import { useCountdown } from '../../utils/timers';
+import PageTransition from '../../components/common/PageTransition';
+
+export default function PrintIDPage() {
+  const { jobId } = useParams();
+  const { jobs } = useApp();
+  const [copied, setCopied] = useState(false);
+  const job = jobs.find(j => j.id === jobId);
+  const time = useCountdown(600, true);
+
+  const copy = async () => {
+    await navigator.clipboard.writeText(job.printId);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1600);
+  };
+
+  if (!job) return (
+    <main className="sx-page">
+      <div className="sx-wrap">Job not found.</div>
+    </main>
+  );
+
+  return (
+    <PageTransition>
+      <main className="sx-page">
+        <div className="sx-wrap">
+          <p className="sx-kicker">Access created</p>
+          <h1 className="sx-title" style={{ fontSize: 'clamp(2.5rem, 5vw, 4.2rem)' }}>
+            Give the shop<br /><em>only this.</em>
+          </h1>
+
+          <div className="sx-grid mt-10">
+            {/* Print ID Card */}
+            <section className="sx-panel col-span-12 lg:col-span-8">
+              <p className="sx-kicker">Temporary Print ID</p>
+              <p className="sx-id mt-6" style={{ fontSize: 'clamp(2rem, 6vw, 4.5rem)' }}>
+                {job.printId}
+              </p>
+              <button onClick={copy} className="sx-button mt-8">
+                {copied ? <Check size={16} /> : <Copy size={16} />}
+                {copied ? 'Copied' : 'Copy Print ID'}
+              </button>
+              <div className="mt-10 border-t border-[var(--line)] pt-6">
+                <p className="text-sm leading-7 text-[var(--ink-secondary)]">
+                  Share this ID verbally or show the QR code. Do not share the original file with the shop.
+                </p>
+              </div>
+            </section>
+
+            {/* Timer & QR */}
+            <aside className="sx-panel col-span-12 lg:col-span-4 text-center">
+              <Clock className="mx-auto text-[var(--ink-secondary)]" />
+              <p className="mt-4 text-sm text-[var(--ink-muted)]">Access window</p>
+              <p className="mt-2 text-5xl text-[var(--ink)]" style={{ fontFamily: 'var(--serif)' }}>
+                {String(Math.floor(time.seconds / 60)).padStart(2, '0')}:{String(time.seconds % 60).padStart(2, '0')}
+              </p>
+              <div className="mt-7 inline-block bg-white p-3 rounded-xl border border-[var(--line)]">
+                <QRCodeSVG value={job.printId} size={132} />
+              </div>
+            </aside>
+
+            {/* Next Steps */}
+            <section className="sx-panel col-span-12">
+              <p className="sx-kicker">Next steps</p>
+              <div className="mt-4 grid gap-5 md:grid-cols-3 text-sm text-[var(--ink-secondary)]">
+                <p>
+                  <b className="text-[var(--ink)] font-mono">01</b><br />
+                  Give the operator this Print ID.
+                </p>
+                <p>
+                  <b className="text-[var(--ink)] font-mono">02</b><br />
+                  They start a purpose-limited print session.
+                </p>
+                <p>
+                  <b className="text-[var(--ink)] font-mono">03</b><br />
+                  Follow the documented closure of the job.
+                </p>
+              </div>
+              <Link to={`/customer/jobs/${job.id}`} className="sx-button sx-button--ghost mt-7">
+                Track job <ArrowRight size={16} />
+              </Link>
+            </section>
+          </div>
+        </div>
+      </main>
+    </PageTransition>
+  );
+}

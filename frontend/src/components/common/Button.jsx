@@ -1,2 +1,20 @@
-import { forwardRef } from 'react'; import { Loader2 } from 'lucide-react';
-const Button=forwardRef(({children,variant='primary',size='md',icon:Icon,iconRight:Right,isLoading=false,disabled=false,fullWidth=false,className='',...props},ref)=><button ref={ref} disabled={disabled||isLoading} className={`ui-button ui-button--${variant} ui-button--${size} ${fullWidth?'w-full':''} ${className}`} {...props}>{isLoading?<Loader2 size={16} className="animate-spin"/>:Icon&&<Icon size={16}/>} {children}{Right&&!isLoading&&<Right size={16}/>}</button>);Button.displayName='Button';export default Button;
+export default function Button({ children, variant = 'primary', size = 'md', className = '', ...props }) {
+  const base = 'sx-button';
+  const variants = {
+    primary: '',
+    ghost: 'sx-button--ghost',
+    outline: 'sx-button--outline',
+    danger: 'sx-button--danger',
+    success: 'sx-button--success',
+  };
+  const sizes = {
+    sm: 'sx-button--sm',
+    md: '',
+    lg: 'sx-button--lg',
+  };
+  return (
+    <button className={`${base} ${variants[variant] || ''} ${sizes[size] || ''} ${className}`} {...props}>
+      {children}
+    </button>
+  );
+}

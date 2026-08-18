@@ -1,71 +1,37 @@
 import { useApp } from '../../context/AppContext';
-import { CheckCircle2, AlertTriangle, Info, AlertCircle, X } from 'lucide-react';
+import { CheckCircle2, AlertCircle, AlertTriangle, Info, X } from 'lucide-react';
 
-const icons = {
+const iconMap = {
   success: CheckCircle2,
   error: AlertCircle,
   warning: AlertTriangle,
   info: Info,
 };
 
-const typeClasses = {
-  success: 'toast-item--success text-emerald-200',
-  error: 'toast-item--error text-rose-200',
-  warning: 'toast-item--warning text-amber-200',
-  info: 'toast-item--info text-sky-200',
-};
-
-const iconColors = {
-  success: 'text-emerald-400',
-  error: 'text-rose-400',
-  warning: 'text-amber-400',
-  info: 'text-sky-400',
-};
-
-const titles = {
-  success: 'Success',
-  error: 'Error',
-  warning: 'Warning',
-  info: 'Information',
+const colorMap = {
+  success: 'text-[var(--emerald)]',
+  error: 'text-[var(--danger)]',
+  warning: 'text-[var(--amber)]',
+  info: 'text-[var(--blue)]',
 };
 
 export default function ToastContainer() {
   const { toasts, removeToast } = useApp();
 
-  if (!toasts || toasts.length === 0) return null;
-
   return (
-    <div className="toast-container" role="region" aria-label="Notifications">
+    <div className="toast-container">
       {toasts.map((toast) => {
-        const Icon = icons[toast.type] || icons.info;
-        const titleText = titles[toast.type] || 'Notice';
-        const cardTypeClass = typeClasses[toast.type] || typeClasses.info;
-        const iconColorClass = iconColors[toast.type] || iconColors.info;
-
+        const Icon = iconMap[toast.type] || Info;
         return (
-          <div
-            key={toast.id}
-            className={`toast-item ${cardTypeClass}`}
-          >
-            <div className={`p-2 rounded-lg bg-white/5 flex-shrink-0 ${iconColorClass}`}>
-              <Icon className="w-5 h-5" />
-            </div>
-
-            <div className="flex-1 min-w-0 pr-2">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-300 mb-0.5">
-                {titleText}
-              </h4>
-              <p className="text-sm text-slate-100 font-medium leading-snug break-words">
-                {toast.message}
-              </p>
-            </div>
-
+          <div key={toast.id} className={`toast-item toast-item--${toast.type}`}>
+            <Icon size={18} className={`mt-0.5 shrink-0 ${colorMap[toast.type] || ''}`} />
+            <p className="flex-1 text-sm leading-snug">{toast.message}</p>
             <button
               onClick={() => removeToast(toast.id)}
-              className="p-1 rounded-md text-slate-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer flex-shrink-0 mt-0.5"
-              aria-label="Close notification"
+              className="shrink-0 p-0.5 rounded hover:bg-black/5 transition-colors text-[var(--ink-muted)]"
+              aria-label="Dismiss"
             >
-              <X className="w-4 h-4" />
+              <X size={14} />
             </button>
           </div>
         );
@@ -73,4 +39,3 @@ export default function ToastContainer() {
     </div>
   );
 }
-

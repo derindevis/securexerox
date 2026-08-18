@@ -9,7 +9,7 @@ export default function App() {
   return (
     <BrowserRouter>
       <AppProvider>
-        <div className="min-h-screen bg-[var(--color-navy-950)]">
+        <div className="min-h-[100dvh] bg-[var(--canvas)]">
           <Navbar />
           <ToastContainer />
           <AppRoutes />

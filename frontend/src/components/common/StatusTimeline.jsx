@@ -41,10 +41,10 @@ export default function StatusTimeline({ currentStatus, compact = false }) {
                   w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0
                   transition-all duration-500
                   ${stageState === 'completed'
-                    ? 'bg-green-500/20 text-green-400 border border-green-500/40'
+                    ? 'bg-[var(--emerald-soft)] text-[var(--emerald)] border border-[var(--emerald)]/30'
                     : stageState === 'active'
-                    ? 'bg-blue-500/20 text-blue-400 border border-blue-500/40 breathe'
-                    : 'bg-white/5 text-gray-600 border border-white/10'
+                    ? 'bg-[var(--blue-soft)] text-[var(--blue)] border border-[var(--blue)]/30'
+                    : 'bg-[var(--canvas)] text-[var(--ink-muted)] border border-[var(--line-strong)]'
                   }
                 `}
               >
@@ -59,8 +59,8 @@ export default function StatusTimeline({ currentStatus, compact = false }) {
                 <div
                   className={`w-0.5 ${compact ? 'h-4' : 'h-6'} transition-colors duration-500 ${
                     stageState === 'completed'
-                      ? 'bg-green-500/40'
-                      : 'bg-white/5'
+                      ? 'bg-[var(--emerald)]/30'
+                      : 'bg-[var(--line)]'
                   }`}
                 />
               )}
@@ -71,16 +71,16 @@ export default function StatusTimeline({ currentStatus, compact = false }) {
               <span
                 className={`text-sm font-medium transition-colors duration-500 ${
                   stageState === 'completed'
-                    ? 'text-green-400'
+                    ? 'text-[var(--emerald)]'
                     : stageState === 'active'
-                    ? 'text-blue-400'
-                    : 'text-gray-600'
+                    ? 'text-[var(--blue)]'
+                    : 'text-[var(--ink-muted)]'
                 }`}
               >
                 {stage.label}
               </span>
               {stageState === 'active' && (
-                <span className="ml-2 text-xs text-blue-400/60 animate-pulse">
+                <span className="ml-2 text-xs text-[var(--blue)] opacity-60 animate-pulse">
                   Current
                 </span>
               )}

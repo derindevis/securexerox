@@ -1,9 +1,7 @@
-import { FileText, Clock, Printer, CheckCircle } from 'lucide-react';
+import { FileText, Clock, Printer } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { JOB_STATUS, STATUS_CONFIG } from '../../utils/constants';
 import PageTransition from '../../components/common/PageTransition';
-import Card from '../../components/common/Card';
-import Badge from '../../components/common/Badge';
 
 export default function PrintQueuePage() {
   const { jobs } = useApp();
@@ -14,63 +12,56 @@ export default function PrintQueuePage() {
 
   return (
     <PageTransition>
-      <div className="min-h-screen bg-radial-glow bg-grid-pattern pt-24 pb-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-3xl mx-auto">
+      <main className="sx-page">
+        <div className="sx-wrap" style={{ maxWidth: '48rem' }}>
           <div className="mb-8">
-            <h1 className="text-2xl sm:text-3xl font-bold text-white mb-1">Print Queue</h1>
-            <p className="text-gray-400 text-sm">{queueJobs.length} jobs in queue • First In → First Out</p>
+            <h1 className="sx-title" style={{ fontSize: 'clamp(1.8rem, 3vw, 2.6rem)' }}>Print Queue</h1>
+            <p className="text-[var(--ink-muted)] text-sm mt-1">{queueJobs.length} jobs in queue — First In, First Out</p>
           </div>
 
           {queueJobs.length === 0 ? (
-            <Card className="text-center !py-12">
-              <Clock className="w-12 h-12 text-gray-600 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-white mb-2">Queue is empty</h3>
-              <p className="text-gray-500 text-sm">No documents waiting to be printed</p>
-            </Card>
+            <div className="sx-panel text-center py-12">
+              <Clock className="w-12 h-12 text-[var(--ink-muted)] mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-[var(--ink)] mb-2">Queue is empty</h3>
+              <p className="text-[var(--ink-muted)] text-sm">No documents waiting to be printed</p>
+            </div>
           ) : (
-            <div className="space-y-3 stagger-children">
+            <div className="space-y-2">
               {queueJobs.map((job, index) => {
                 const config = STATUS_CONFIG[job.status];
                 const isPrinting = job.status === JOB_STATUS.PRINTING || job.status === JOB_STATUS.SECURE_SESSION;
                 return (
-                  <Card
+                  <div
                     key={job.id}
-                    className={`!p-4 flex items-center gap-4 ${isPrinting ? 'border-blue-500/20' : ''}`}
+                    className={`sx-card !p-4 flex items-center gap-4 ${isPrinting ? '!border-[var(--blue)]/20' : ''}`}
                   >
-                    {/* Position */}
-                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 font-bold text-lg ${
-                      isPrinting ? 'bg-blue-500/15 text-blue-400' : 'bg-white/5 text-gray-500'
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 font-bold text-lg font-mono ${
+                      isPrinting ? 'bg-[var(--blue-soft)] text-[var(--blue)]' : 'bg-[var(--sage)] text-[var(--ink-muted)]'
                     }`}>
                       #{index + 1}
                     </div>
-
-                    {/* Info */}
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-white truncate">{job.fileName}</p>
+                      <p className="text-sm font-medium text-[var(--ink)] truncate">{job.fileName}</p>
                       <div className="flex items-center gap-2 mt-0.5">
-                        <span className="text-xs text-gray-500 font-mono">{job.printId}</span>
-                        <span className="text-xs text-gray-600">• {job.copies} {job.copies === 1 ? 'copy' : 'copies'}</span>
+                        <span className="text-xs text-[var(--ink-muted)] font-mono">{job.printId}</span>
+                        <span className="text-xs text-[var(--ink-muted)]">{job.copies} {job.copies === 1 ? 'copy' : 'copies'}</span>
                       </div>
                     </div>
-
-                    {/* Status */}
-                    <Badge color={config?.color || 'gray'} size="sm" dot pulse={isPrinting}>
+                    <span className={`sx-badge ${isPrinting ? 'sx-badge--success' : ''}`}>
                       {isPrinting ? 'PRINTING' : 'WAITING'}
-                    </Badge>
-                  </Card>
+                    </span>
+                  </div>
                 );
               })}
             </div>
           )}
 
-          {/* Legend */}
-          <Card className="mt-8 !p-4" hover={false}>
-            <p className="text-xs text-gray-500">
-              📋 Jobs are processed in First-In-First-Out (FIFO) order. Active sessions are shown at the top.
-            </p>
-          </Card>
+          <div className="sx-infobar mt-8">
+            <Printer size={16} className="shrink-0" />
+            <p className="text-sm">Jobs are processed in First-In-First-Out (FIFO) order. Active sessions are shown at the top.</p>
+          </div>
         </div>
-      </div>
+      </main>
     </PageTransition>
   );
 }

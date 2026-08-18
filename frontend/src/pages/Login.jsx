@@ -6,8 +6,8 @@ import PageTransition from '../components/common/PageTransition';
 import Modal from '../components/common/Modal';
 
 export default function Login() {
-  const [mode, setMode] = useState('signin'); // 'signin' | 'signup'
-  const [role, setRole] = useState('customer'); // 'customer' | 'shop'
+  const [mode, setMode] = useState('signin');
+  const [role, setRole] = useState('customer');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -25,11 +25,7 @@ export default function Login() {
       navigate(role === 'shop' ? '/shop/dashboard' : '/customer/dashboard');
     } catch (error) {
       const msg = error.message || 'Unable to sign in. Please check your email and password.';
-      setModalAlert({
-        type: 'error',
-        title: 'Sign In Failed',
-        message: msg,
-      });
+      setModalAlert({ type: 'error', title: 'Sign In Failed', message: msg });
       addToast(msg, 'error');
     } finally {
       setSubmitting(false);
@@ -40,31 +36,19 @@ export default function Login() {
     event.preventDefault();
     if (!name.trim()) {
       const msg = 'Please enter your full name.';
-      setModalAlert({
-        type: 'error',
-        title: 'Validation Required',
-        message: msg,
-      });
+      setModalAlert({ type: 'error', title: 'Validation Required', message: msg });
       addToast(msg, 'error');
       return;
     }
     if (password.length < 8) {
       const msg = 'Password must be at least 8 characters long.';
-      setModalAlert({
-        type: 'error',
-        title: 'Password Requirement',
-        message: msg,
-      });
+      setModalAlert({ type: 'error', title: 'Password Requirement', message: msg });
       addToast(msg, 'error');
       return;
     }
     if (!/[A-Za-z]/.test(password) || !/[0-9]/.test(password)) {
       const msg = 'Password must contain both letters and numbers (e.g. Secure123).';
-      setModalAlert({
-        type: 'error',
-        title: 'Password Requirement',
-        message: msg,
-      });
+      setModalAlert({ type: 'error', title: 'Password Requirement', message: msg });
       addToast(msg, 'error');
       return;
     }
@@ -75,11 +59,7 @@ export default function Login() {
       navigate(role === 'shop' ? '/shop/dashboard' : '/customer/dashboard');
     } catch (error) {
       const msg = error.message || 'Registration failed. Please try again.';
-      setModalAlert({
-        type: 'error',
-        title: 'Sign Up Failed',
-        message: msg,
-      });
+      setModalAlert({ type: 'error', title: 'Sign Up Failed', message: msg });
       addToast(msg, 'error');
     } finally {
       setSubmitting(false);
@@ -88,17 +68,17 @@ export default function Login() {
 
   return (
     <PageTransition>
-      <main className="vault-page">
-        <div className="vault-wrap vault-form">
-          <p className="vault-kicker">Secure Access</p>
-          <h1 className="vault-title">
+      <main className="sx-page">
+        <div className="sx-wrap sx-form">
+          <p className="sx-kicker">Secure Access</p>
+          <h1 className="sx-title" style={{ fontSize: 'clamp(2.5rem, 5vw, 4.2rem)' }}>
             {mode === 'signin' ? (
               <>Sign <em>in.</em></>
             ) : (
               <>Create <em>account.</em></>
             )}
           </h1>
-          <p className="vault-lede">
+          <p className="sx-lede">
             {mode === 'signin'
               ? 'Access your encrypted document handoff vault.'
               : role === 'shop'
@@ -110,28 +90,22 @@ export default function Login() {
           <div className="flex border-b border-[var(--line)] mt-6 mb-6">
             <button
               type="button"
-              onClick={() => {
-                setMode('signin');
-                setModalAlert(null);
-              }}
+              onClick={() => { setMode('signin'); setModalAlert(null); }}
               className={`flex-1 py-3 text-sm font-semibold flex items-center justify-center gap-2 border-b-2 transition-all ${
                 mode === 'signin'
-                  ? 'border-[var(--lime)] text-[var(--paper)]'
-                  : 'border-transparent text-slate-400 hover:text-slate-200'
+                  ? 'border-[var(--ink)] text-[var(--ink)]'
+                  : 'border-transparent text-[var(--ink-muted)] hover:text-[var(--ink-secondary)]'
               }`}
             >
               <LogIn size={16} /> Sign In
             </button>
             <button
               type="button"
-              onClick={() => {
-                setMode('signup');
-                setModalAlert(null);
-              }}
+              onClick={() => { setMode('signup'); setModalAlert(null); }}
               className={`flex-1 py-3 text-sm font-semibold flex items-center justify-center gap-2 border-b-2 transition-all ${
                 mode === 'signup'
-                  ? 'border-[var(--lime)] text-[var(--paper)]'
-                  : 'border-transparent text-slate-400 hover:text-slate-200'
+                  ? 'border-[var(--ink)] text-[var(--ink)]'
+                  : 'border-transparent text-[var(--ink-muted)] hover:text-[var(--ink-secondary)]'
               }`}
             >
               <UserPlus size={16} /> Sign Up
@@ -139,35 +113,26 @@ export default function Login() {
           </div>
 
           {/* Role Selection */}
-          <div className="vault-choice mb-6">
-            <button
-              type="button"
-              data-active={role === 'customer'}
-              onClick={() => setRole('customer')}
-            >
+          <div className="sx-choice mb-6">
+            <button type="button" data-active={role === 'customer'} onClick={() => setRole('customer')}>
               <UserRound size={20} />
               <b>Customer</b>
-              <span className="mt-2 block text-xs text-slate-400">
-                {mode === 'signin' ? 'Generate Print ID & track job.' : 'Create customer account.'}
+              <span className="mt-2 block text-xs text-[var(--ink-muted)]">
+                {mode === 'signin' ? 'Generate Print ID and track job.' : 'Create customer account.'}
               </span>
             </button>
-            <button
-              type="button"
-              data-active={role === 'shop'}
-              onClick={() => setRole('shop')}
-            >
+            <button type="button" data-active={role === 'shop'} onClick={() => setRole('shop')}>
               <Building2 size={20} />
               <b>Print operator</b>
-              <span className="mt-2 block text-xs text-slate-400">
-                {mode === 'signin' ? 'Verify ID & execute session.' : 'Create print operator account.'}
+              <span className="mt-2 block text-xs text-[var(--ink-muted)]">
+                {mode === 'signin' ? 'Verify ID and execute session.' : 'Create print operator account.'}
               </span>
             </button>
           </div>
 
           {mode === 'signin' ? (
-            /* Sign In Form */
-            <form onSubmit={handleSignIn} className="vault-panel">
-              <div className="vault-field">
+            <form onSubmit={handleSignIn} className="sx-panel">
+              <div className="sx-field">
                 <label htmlFor="email">Email Address</label>
                 <input
                   id="email"
@@ -178,7 +143,7 @@ export default function Login() {
                   placeholder="you@example.com"
                 />
               </div>
-              <div className="vault-field">
+              <div className="sx-field">
                 <label htmlFor="password">Password</label>
                 <input
                   id="password"
@@ -189,18 +154,14 @@ export default function Login() {
                   placeholder="Your password"
                 />
               </div>
-              <button
-                disabled={submitting}
-                className="vault-button mt-4 w-full"
-              >
-                {submitting ? 'Signing in...' : `Sign In as ${role === 'shop' ? 'Print Operator' : 'Customer'}`}{' '}
-                <ArrowRight size={16} />
+              <button disabled={submitting} className="sx-button mt-5 w-full">
+                {submitting ? 'Signing in...' : `Sign In as ${role === 'shop' ? 'Print Operator' : 'Customer'}`}
+                {' '}<ArrowRight size={16} />
               </button>
             </form>
           ) : (
-            /* Sign Up Form */
-            <form onSubmit={handleSignUp} className="vault-panel">
-              <div className="vault-field">
+            <form onSubmit={handleSignUp} className="sx-panel">
+              <div className="sx-field">
                 <label htmlFor="signup-name">Full Name</label>
                 <input
                   id="signup-name"
@@ -208,10 +169,10 @@ export default function Login() {
                   type="text"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="John Doe"
+                  placeholder="Your full name"
                 />
               </div>
-              <div className="vault-field">
+              <div className="sx-field">
                 <label htmlFor="signup-email">Email Address</label>
                 <input
                   id="signup-email"
@@ -222,7 +183,7 @@ export default function Login() {
                   placeholder="you@example.com"
                 />
               </div>
-              <div className="vault-field">
+              <div className="sx-field">
                 <label htmlFor="signup-password">Password</label>
                 <input
                   id="signup-password"
@@ -233,23 +194,20 @@ export default function Login() {
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Min. 8 chars (letters & numbers)"
                 />
-                <span className="mt-1 block text-xs text-slate-400">
+                <span className="mt-1 block text-xs text-[var(--ink-muted)]">
                   Must be at least 8 characters long and include both letters and numbers (e.g. Derin1234).
                 </span>
               </div>
-              <button
-                disabled={submitting}
-                className="vault-button mt-4 w-full"
-              >
-                {submitting ? 'Creating account...' : `Create ${role === 'shop' ? 'Print Operator' : 'Customer'} Account`}{' '}
-                <ArrowRight size={16} />
+              <button disabled={submitting} className="sx-button mt-5 w-full">
+                {submitting ? 'Creating account...' : `Create ${role === 'shop' ? 'Print Operator' : 'Customer'} Account`}
+                {' '}<ArrowRight size={16} />
               </button>
             </form>
           )}
         </div>
       </main>
 
-      {/* Alert Modal Popup for Sign In & Sign Up */}
+      {/* Alert Modal */}
       <Modal
         isOpen={Boolean(modalAlert)}
         onClose={() => setModalAlert(null)}
@@ -257,21 +215,21 @@ export default function Login() {
       >
         <div className="flex flex-col items-center text-center p-2">
           {modalAlert?.type === 'error' ? (
-            <div className="w-12 h-12 rounded-full bg-rose-500/10 border border-rose-500/30 flex items-center justify-center text-rose-400 mb-4">
+            <div className="w-12 h-12 rounded-full bg-[var(--danger-soft)] border border-[var(--danger)]/20 flex items-center justify-center text-[var(--danger)] mb-4">
               <AlertCircle size={28} />
             </div>
           ) : (
-            <div className="w-12 h-12 rounded-full bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 mb-4">
+            <div className="w-12 h-12 rounded-full bg-[var(--emerald-soft)] border border-[var(--emerald)]/20 flex items-center justify-center text-[var(--emerald)] mb-4">
               <CheckCircle2 size={28} />
             </div>
           )}
-          <p className="text-base text-slate-200 mb-6 font-medium leading-relaxed">
+          <p className="text-base text-[var(--ink)] mb-6 font-medium leading-relaxed">
             {modalAlert?.message}
           </p>
           <button
             type="button"
             onClick={() => setModalAlert(null)}
-            className="vault-button w-full justify-center"
+            className="sx-button w-full justify-center"
           >
             Acknowledge
           </button>

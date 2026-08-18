@@ -1,199 +1,386 @@
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { QRCodeSVG } from 'qrcode.react';
 import {
-  ArrowRight,
-  FileKey2,
-  Printer,
   ShieldCheck,
-  Upload,
   Lock,
+  ArrowRight,
+  Printer,
+  Clock,
   CheckCircle2,
+  Trash2,
+  RefreshCw,
+  Copy,
+  Check,
+  KeyRound,
+  FileCheck,
 } from 'lucide-react';
 import PageTransition from '../components/common/PageTransition';
 
-const steps = [
-  {
-    number: '01',
-    icon: Upload,
-    title: 'Upload once',
-    text: 'Client-side AES-256 encryption converts your PDF or image into a time-bound, protected print buffer.',
-  },
-  {
-    number: '02',
-    icon: FileKey2,
-    title: 'Share a Print ID',
-    text: 'Hand the operator a 6-character ephemeral passcode (e.g. SX-7K4P92) instead of emailing your file.',
-  },
-  {
-    number: '03',
-    icon: Printer,
-    title: 'Print with purpose',
-    text: 'The shop opens a restricted, read-only session in RAM with zero download or export permissions.',
-  },
-  {
-    number: '04',
-    icon: ShieldCheck,
-    title: 'Automatic RAM shredding',
-    text: 'Once printed or upon expiry, the document is irrevocably wiped from memory with zero persistent trace.',
-  },
+// Real-world sensitive document choices
+const SAMPLE_FILES = [
+  { id: 'passport', name: 'Passport_US_Renewal.pdf', pages: 2, size: '1.8 MB' },
+  { id: 'contract', name: 'Employment_NDA_Final.pdf', pages: 4, size: '2.1 MB' },
+  { id: 'tax', name: 'IRS_Tax_Form_1040.pdf', pages: 6, size: '1.4 MB' },
 ];
 
 export default function Landing() {
+  // ─── Customer Upload / Pass State ───
+  const [selectedFile, setSelectedFile] = useState(SAMPLE_FILES[0]);
+  const [passCode, setPassCode] = useState('SX-8492');
+  const [timeLeft, setTimeLeft] = useState(599); // 10:00 countdown
+  const [copied, setCopied] = useState(false);
+
+  // ─── Print Shop Kiosk State ───
+  const [kioskCode, setKioskCode] = useState('');
+  const [isConnected, setIsConnected] = useState(false);
+  const [isPrinting, setIsPrinting] = useState(false);
+  const [isWiped, setIsWiped] = useState(false);
+
+  // Countdown timer
+  useEffect(() => {
+    if (isWiped) return;
+    const timer = setInterval(() => {
+      setTimeLeft((t) => (t > 0 ? t - 1 : 0));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [isWiped]);
+
+  const formatTimer = (s) => {
+    const min = Math.floor(s / 60);
+    const sec = s % 60;
+    return `${min.toString().padStart(2, '0')}:${sec.toString().padStart(2, '0')}`;
+  };
+
+  const handleRotateKey = () => {
+    setIsWiped(false);
+    setIsPrinting(false);
+    setIsConnected(false);
+    setKioskCode('');
+    setPassCode(`SX-${Math.floor(1000 + Math.random() * 9000)}`);
+    setTimeLeft(600);
+  };
+
+  const handleCopyCode = () => {
+    navigator.clipboard?.writeText(passCode);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  };
+
+  const handleQuickSend = () => {
+    setKioskCode(passCode);
+    setIsConnected(true);
+  };
+
+  const handleExecutePrint = () => {
+    setIsPrinting(true);
+    setTimeout(() => {
+      setIsPrinting(false);
+      setIsWiped(true);
+      setIsConnected(false);
+    }, 1400);
+  };
+
   return (
     <PageTransition>
-      <main className="vault-page">
-        <div className="vault-wrap space-y-12">
-          {/* HERO SECTION */}
-          <section className="vault-hero" aria-labelledby="hero-title">
-            <div className="space-y-6">
-              <span className="vault-kicker">Private Document Handoff Vault</span>
+      <main className="sx-page">
+        <div className="sx-wrap space-y-16">
+          
+          {/* ─── 1. HERO SECTION ─── */}
+          <section className="grid lg:grid-cols-12 gap-10 lg:gap-12 items-center pt-2">
+            
+            {/* Left: Headline & Actions */}
+            <div className="lg:col-span-5 space-y-5">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[var(--sage)] text-[var(--emerald)] text-xs font-semibold uppercase tracking-wider font-mono">
+                <ShieldCheck size={14} />
+                <span>Zero-Trust Print Vault</span>
+              </div>
 
-              <h1 id="hero-title" className="vault-title">
-                Print the page.<br />
-                <em>Not the history.</em>
+              <h1 className="sx-title text-4xl sm:text-5xl lg:text-6xl font-normal leading-[1.05] tracking-tight text-[var(--ink)]">
+                Print the page.
+                <br />
+                <em className="text-[var(--emerald)]">Leave zero trace.</em>
               </h1>
 
-              <p className="vault-lede">
-                SecureXerox turns sensitive documents into short-lived, encrypted print handoffs—so local print shops get what they need to execute your print job without retaining a permanent digital copy.
+              <p className="text-base text-[var(--ink-secondary)] leading-relaxed">
+                SecureXerox streams encrypted confidential files directly into print shop RAM with an automatic 10-minute shredder. No files left on local hard drives.
               </p>
 
-              <div className="mt-8 flex flex-wrap gap-4 items-center">
-                <Link to="/login" className="vault-button">
-                  Create a Print ID <ArrowRight size={16} />
+              <div className="flex flex-wrap gap-3 items-center pt-1">
+                <Link to="/login" className="sx-button sx-button--lg">
+                  <span>Create Print Pass</span>
+                  <ArrowRight size={16} />
                 </Link>
-                <a className="vault-button vault-button--quiet" href="#how">
+                <a href="#how" className="sx-button sx-button--ghost sx-button--lg">
                   How it works
                 </a>
               </div>
 
-              {/* Security Telemetry Summary Pills */}
-              <div className="pt-6 grid grid-cols-3 gap-3 border-t border-white/10 max-w-lg">
-                <div>
-                  <strong className="block text-[var(--paper)] text-base font-serif">0 Bytes</strong>
-                  <span className="text-xs text-slate-400">Post-Print Storage</span>
+              {/* Metric Strip */}
+              <div className="grid grid-cols-3 gap-2 pt-4 border-t border-[var(--line)] font-mono text-center">
+                <div className="p-2.5 rounded-xl bg-white border border-[var(--line)]">
+                  <div className="text-base font-bold text-[var(--ink)]">0 Bytes</div>
+                  <div className="text-[10px] text-[var(--ink-secondary)] mt-0.5">Disk Storage</div>
                 </div>
-                <div>
-                  <strong className="block text-[var(--lime)] text-base font-serif">10 Max Min</strong>
-                  <span className="text-xs text-slate-400">Time-To-Live Window</span>
+                <div className="p-2.5 rounded-xl bg-white border border-[var(--line)]">
+                  <div className="text-base font-bold text-[var(--emerald)]">10 Min</div>
+                  <div className="text-[10px] text-[var(--ink-secondary)] mt-0.5">Access Window</div>
                 </div>
-                <div>
-                  <strong className="block text-sky-400 text-base font-serif">AES-256</strong>
-                  <span className="text-xs text-slate-400">GCM Encryption</span>
+                <div className="p-2.5 rounded-xl bg-white border border-[var(--line)]">
+                  <div className="text-base font-bold text-[var(--ink)]">AES-256</div>
+                  <div className="text-[10px] text-[var(--ink-secondary)] mt-0.5">Client Encrypted</div>
                 </div>
               </div>
             </div>
 
-            {/* REAL-WORLD PRINT SHOP HERO IMAGE CARD */}
-            <div className="landing-image-card group">
-              <img
-                src="/landing_hero_print_shop.jpg"
-                alt="Customer using SecureXerox Print ID at a modern print shop printer"
-                className="w-full h-auto object-cover transform group-hover:scale-105 transition-transform duration-700"
-              />
-              <div className="landing-image-overlay" />
-
-              {/* Floating Live Telemetry Badge Overlay */}
-              <div className="absolute bottom-4 left-4 right-4 p-4 rounded-xl bg-slate-950/85 backdrop-blur-md border border-white/15 shadow-2xl flex items-center justify-between gap-3">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-[var(--lime)]/10 text-[var(--lime)]">
-                    <Lock size={18} />
-                  </div>
-                  <div>
-                    <span className="text-[10px] font-mono uppercase tracking-widest text-slate-400 block">
-                      TEMPORARY PRINT ACCESS
-                    </span>
-                    <span className="font-mono text-lg font-bold text-[var(--paper)]">
-                      SX-7K4P92
-                    </span>
-                  </div>
+            {/* Right: Live Interactive Counter Handoff Simulator */}
+            <div className="lg:col-span-7">
+              <div className="bg-white rounded-2xl border border-[var(--line)] shadow-sm p-5 sm:p-6 space-y-5">
+                
+                <div className="flex items-center justify-between pb-3 border-b border-[var(--line)]">
+                  <span className="font-mono text-xs font-bold text-[var(--ink)] uppercase tracking-wider flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-[var(--emerald)] animate-pulse" />
+                    Interactive Counter Handoff Simulator
+                  </span>
+                  <span className="text-[11px] font-mono text-[var(--ink-secondary)]">
+                    Try the 2-step flow below
+                  </span>
                 </div>
-                <span className="vault-orbit__chip !mt-0 text-[10px]">
-                  ACCESS WINDOW ACTIVE
-                </span>
+
+                <div className="grid sm:grid-cols-2 gap-4">
+                  
+                  {/* STEP 1: Customer Mobile / Web Upload */}
+                  <div className="p-4 rounded-xl bg-[var(--canvas)] border border-[var(--line)] space-y-3.5 flex flex-col justify-between">
+                    <div>
+                      <div className="flex items-center justify-between text-xs font-mono mb-2">
+                        <span className="font-bold text-[var(--ink)]">1. Customer Device</span>
+                        <span className="text-[var(--emerald)] font-semibold">ENCRYPTED</span>
+                      </div>
+
+                      {/* File selector */}
+                      <div className="space-y-1.5 mb-3">
+                        <label className="text-[10px] font-mono text-[var(--ink-secondary)] uppercase">
+                          Select Document:
+                        </label>
+                        <div className="grid grid-cols-3 gap-1.5">
+                          {SAMPLE_FILES.map((f) => (
+                            <button
+                              key={f.id}
+                              onClick={() => {
+                                setSelectedFile(f);
+                                handleRotateKey();
+                              }}
+                              className={`p-1.5 rounded-lg border text-[11px] font-medium text-left truncate transition-colors ${
+                                selectedFile.id === f.id
+                                  ? 'bg-white border-[var(--ink)] text-[var(--ink)] font-bold shadow-xs'
+                                  : 'bg-white/60 border-[var(--line)] text-[var(--ink-secondary)] hover:bg-white'
+                              }`}
+                            >
+                              <div className="truncate">{f.name.split('_')[0]}</div>
+                              <div className="text-[9px] text-[var(--ink-muted)]">{f.size}</div>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* QR and Passcode Display */}
+                      <div className="p-3 bg-white rounded-lg border border-[var(--line)] text-center space-y-2">
+                        {isWiped ? (
+                          <div className="py-4 space-y-1 text-center">
+                            <CheckCircle2 size={24} className="text-[var(--emerald)] mx-auto" />
+                            <div className="font-mono text-xs font-bold text-[var(--ink)]">MEMORY WIPED</div>
+                            <div className="text-[10px] text-[var(--ink-secondary)]">0 bytes remain in RAM</div>
+                          </div>
+                        ) : (
+                          <>
+                            <div className="flex justify-center py-1">
+                              <QRCodeSVG
+                                value={`https://securexerox.app/verify/${passCode}`}
+                                size={80}
+                                level="M"
+                              />
+                            </div>
+                            <div className="flex items-center justify-center gap-1.5">
+                              <span className="font-mono text-xl font-extrabold tracking-widest text-[var(--ink)]">
+                                {passCode}
+                              </span>
+                              <button
+                                onClick={handleCopyCode}
+                                className="p-1 rounded hover:bg-neutral-100 text-[var(--ink-secondary)]"
+                                title="Copy"
+                              >
+                                {copied ? <Check size={13} className="text-[var(--emerald)]" /> : <Copy size={13} />}
+                              </button>
+                            </div>
+                            <div className="text-[10px] font-mono text-[var(--amber)] flex items-center justify-center gap-1">
+                              <Clock size={11} />
+                              <span>Auto-purge: {formatTimer(timeLeft)}</span>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={handleQuickSend}
+                      disabled={isWiped}
+                      className="w-full py-2 rounded-lg bg-[var(--ink)] hover:bg-black text-white text-xs font-semibold transition-colors disabled:opacity-40"
+                    >
+                      Send Code to Kiosk &rarr;
+                    </button>
+                  </div>
+
+                  {/* STEP 2: Shop Clerk Counter Kiosk */}
+                  <div className="p-4 rounded-xl bg-[var(--canvas)] border border-[var(--line)] space-y-3.5 flex flex-col justify-between">
+                    <div>
+                      <div className="flex items-center justify-between text-xs font-mono mb-2">
+                        <span className="font-bold text-[var(--ink)]">2. Shop Terminal</span>
+                        <span className="text-[var(--ink-secondary)]">READ-ONLY</span>
+                      </div>
+
+                      {/* Code input */}
+                      <div className="space-y-1 mb-3">
+                        <label className="text-[10px] font-mono text-[var(--ink-secondary)] uppercase">
+                          Clerk Enters Code:
+                        </label>
+                        <div className="flex gap-1.5">
+                          <input
+                            type="text"
+                            placeholder="e.g. SX-8492"
+                            value={kioskCode}
+                            onChange={(e) => {
+                              setKioskCode(e.target.value.toUpperCase());
+                              setIsConnected(e.target.value.toUpperCase() === passCode);
+                            }}
+                            className="flex-1 px-2.5 py-1.5 rounded-lg border border-[var(--line-strong)] bg-white text-xs font-mono uppercase tracking-wider"
+                          />
+                          <button
+                            onClick={() => setIsConnected(kioskCode === passCode)}
+                            className="px-3 py-1.5 rounded-lg bg-[var(--ink)] text-white text-xs font-semibold"
+                          >
+                            Verify
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Terminal Status Window */}
+                      <div className="p-3 bg-white rounded-lg border border-[var(--line)] min-h-[120px] flex flex-col justify-center text-center">
+                        {isPrinting ? (
+                          <div className="py-2 space-y-1">
+                            <Printer size={22} className="text-[var(--emerald)] animate-bounce mx-auto" />
+                            <div className="font-mono text-xs font-bold text-[var(--ink)]">PRINTING TO PAPER...</div>
+                            <div className="text-[10px] text-[var(--ink-secondary)]">Spooling RAM stream</div>
+                          </div>
+                        ) : isWiped ? (
+                          <div className="py-2 space-y-1">
+                            <div className="font-mono text-xs font-bold text-[var(--emerald)]">✓ PRINT EXECUTED</div>
+                            <div className="text-[10px] text-[var(--ink-secondary)]">Memory zeroed from terminal</div>
+                          </div>
+                        ) : isConnected ? (
+                          <div className="space-y-2">
+                            <div className="text-xs font-mono font-bold text-[var(--emerald)]">
+                              ✓ {selectedFile.name}
+                            </div>
+                            <div className="text-[10px] text-[var(--ink-secondary)] font-mono">
+                              {selectedFile.pages} Pages • Read-Only Sandbox
+                            </div>
+                            <button
+                              onClick={handleExecutePrint}
+                              className="w-full py-1.5 rounded-md bg-[var(--emerald)] hover:bg-[#15803D] text-white font-semibold text-xs transition-colors flex items-center justify-center gap-1.5"
+                            >
+                              <Printer size={13} />
+                              <span>Execute Print & Shred</span>
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="text-xs text-[var(--ink-muted)] font-mono">
+                            Waiting for code verification...
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="text-[10px] font-mono text-[var(--ink-secondary)] flex justify-between">
+                      <span>DRM: <strong className="text-[var(--ink)]">WATERMARKED</strong></span>
+                      <span>DISK: <strong className="text-[var(--danger)]">0 KB</strong></span>
+                    </div>
+                  </div>
+
+                </div>
               </div>
             </div>
+
           </section>
 
-          {/* THE LIFECYCLE & WORKSPACE DOCUMENT SECURITY */}
-          <section id="how" className="vault-section" aria-labelledby="how-title">
-            <div className="mb-8">
-              <p className="vault-kicker">The Cryptographic Lifecycle</p>
-              <h2 id="how-title" className="vault-title !text-[clamp(2rem,3.8vw,4.2rem)]">
-                A clear route from <em>upload</em> to closure.
+          {/* ─── 2. HOW IT WORKS (CLEAN 4-STEP PROTOCOL) ─── */}
+          <section id="how" className="space-y-6 pt-4">
+            <div className="text-center space-y-2">
+              <span className="sx-kicker">Cryptographic Protocol</span>
+              <h2 className="sx-title text-3xl sm:text-4xl font-normal text-[var(--ink)]">
+                Four steps from <em>upload</em> to complete closure.
               </h2>
             </div>
 
-            <div className="grid gap-8 lg:grid-cols-12 items-center">
-              {/* Process Steps List */}
-              <div className="lg:col-span-7 vault-process !mt-0 !grid-cols-1 sm:!grid-cols-2 rounded-xl overflow-hidden">
-                {steps.map(({ number, icon: Icon, title, text }) => (
-                  <article className="vault-step p-5" key={number}>
-                    <span className="vault-step__number font-mono">{number}</span>
-                    <Icon size={20} className="mt-3 text-[var(--lime)]" />
-                    <h3 className="!mt-2 font-serif text-lg">{title}</h3>
-                    <p className="text-xs text-slate-400 leading-relaxed">{text}</p>
-                  </article>
-                ))}
-              </div>
-
-              {/* REAL-WORLD WORKSPACE ENCRYPTION IMAGE */}
-              <div className="lg:col-span-5 landing-image-card group">
-                <img
-                  src="/landing_document_security.jpg"
-                  alt="Laptop displaying client-side document encryption and legal agreements"
-                  className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-700"
-                />
-                <div className="landing-image-overlay" />
-                <div className="absolute bottom-4 left-4 right-4 p-3 rounded-lg bg-slate-950/80 backdrop-blur-md border border-white/10 text-xs text-slate-300">
-                  <div className="flex items-center gap-2 mb-1">
-                    <CheckCircle2 size={14} className="text-[var(--lime)]" />
-                    <span className="font-semibold text-white">Client-Side Encryption</span>
-                  </div>
-                  <p className="text-[11px] text-slate-400">
-                    Files are encrypted locally before transmission. Raw documents never touch unencrypted disk storage.
-                  </p>
+            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="p-5 rounded-xl bg-white border border-[var(--line)] space-y-2.5 shadow-xs">
+                <div className="font-mono text-xs font-bold text-[var(--ink-muted)]">01</div>
+                <div className="w-8 h-8 rounded-lg bg-[var(--sage)] text-[var(--ink)] flex items-center justify-center">
+                  <Lock size={16} />
                 </div>
-              </div>
-            </div>
-          </section>
-
-          {/* REAL OPERATOR INTERFACE SHOWCASE */}
-          <section className="vault-section">
-            <div className="grid gap-8 lg:grid-cols-12 lg:items-center">
-              <div className="lg:col-span-5 space-y-4">
-                <p className="vault-kicker">Designed for real handoffs</p>
-                <h2 className="vault-title !text-[clamp(1.8rem,3.5vw,3.8rem)]">
-                  No hidden journey.<br />
-                  <em>Every state is visible.</em>
-                </h2>
-                <p className="text-sm leading-7 text-slate-300">
-                  Customers follow a single guided flow while print operators verify Print IDs in a restricted, read-only printing sandbox. The interface continuously monitors session time and forces immediate memory shredding when complete.
+                <h3 className="font-semibold text-sm text-[var(--ink)]">Client Encryption</h3>
+                <p className="text-xs text-[var(--ink-secondary)] leading-relaxed">
+                  WebCrypto converts your document into an encrypted binary stream before it leaves your browser.
                 </p>
-                <div className="pt-2 flex flex-wrap gap-3">
-                  <Link to="/login" className="vault-button">
-                    Open SecureXerox <ArrowRight size={16} />
-                  </Link>
-                </div>
               </div>
 
-              {/* SESSION MOCKUP SHOWCASE */}
-              <div className="lg:col-span-7 landing-image-card p-2 bg-slate-900/90 border border-white/15">
-                <img
-                  src="/session-mockup.png"
-                  alt="SecureXerox Operator Printing Sandbox Interface"
-                  className="w-full h-auto rounded-lg object-cover"
-                />
+              <div className="p-5 rounded-xl bg-white border border-[var(--line)] space-y-2.5 shadow-xs">
+                <div className="font-mono text-xs font-bold text-[var(--ink-muted)]">02</div>
+                <div className="w-8 h-8 rounded-lg bg-[#E0F2FE] text-[#0284C7] flex items-center justify-center">
+                  <KeyRound size={16} />
+                </div>
+                <h3 className="font-semibold text-sm text-[var(--ink)]">6-Digit Print ID</h3>
+                <p className="text-xs text-[var(--ink-secondary)] leading-relaxed">
+                  Hand the operator a short-lived passcode instead of emailing raw attachments.
+                </p>
+              </div>
+
+              <div className="p-5 rounded-xl bg-white border border-[var(--line)] space-y-2.5 shadow-xs">
+                <div className="font-mono text-xs font-bold text-[var(--ink-muted)]">03</div>
+                <div className="w-8 h-8 rounded-lg bg-[#FEF3C7] text-[#D97706] flex items-center justify-center">
+                  <Printer size={16} />
+                </div>
+                <h3 className="font-semibold text-sm text-[var(--ink)]">In-RAM Spooling</h3>
+                <p className="text-xs text-[var(--ink-secondary)] leading-relaxed">
+                  The operator station streams read-only bytes directly to physical printer hardware.
+                </p>
+              </div>
+
+              <div className="p-5 rounded-xl bg-white border border-[var(--line)] space-y-2.5 shadow-xs">
+                <div className="font-mono text-xs font-bold text-[var(--ink-muted)]">04</div>
+                <div className="w-8 h-8 rounded-lg bg-[#FEE2E2] text-[var(--danger)] flex items-center justify-center">
+                  <Trash2 size={16} />
+                </div>
+                <h3 className="font-semibold text-sm text-[var(--ink)]">Memory Shredding</h3>
+                <p className="text-xs text-[var(--ink-secondary)] leading-relaxed">
+                  Upon print complete or 10-minute expiry, transient memory buffers are wiped clean.
+                </p>
               </div>
             </div>
           </section>
 
-          {/* FOOTER */}
-          <footer className="border-t border-white/10 py-8 text-xs text-slate-500 flex flex-col sm:flex-row items-center justify-between gap-4">
-            <span>SecureXerox · Ephemeral, Zero-Trust Document Handoff Vault</span>
-            <div className="flex items-center gap-4">
-              <Link to="/login" className="hover:text-white transition-colors">Sign In</Link>
-              <a href="#how" className="hover:text-white transition-colors">How it works</a>
+          {/* ─── 3. MINIMAL CLEAN FOOTER ─── */}
+          <footer className="pt-8 pb-6 border-t border-[var(--line)] flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-[var(--ink-muted)]">
+            <div className="flex items-center gap-2 text-[var(--ink)] font-semibold">
+              <ShieldCheck size={16} className="text-[var(--emerald)]" />
+              <span>SecureXerox — Zero-Trust Document Vault</span>
+            </div>
+            <div className="flex items-center gap-5">
+              <Link to="/login" className="hover:text-[var(--ink)] transition-colors">Sign In</Link>
+              <a href="#how" className="hover:text-[var(--ink)] transition-colors">Protocol</a>
+              <span>0 Bytes Persisted</span>
             </div>
           </footer>
+
         </div>
       </main>
     </PageTransition>
