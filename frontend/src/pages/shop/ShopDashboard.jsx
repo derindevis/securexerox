@@ -132,159 +132,163 @@ export default function ShopDashboard() {
           </section>
 
           {/* Permanent Counter QR & Standee Banner */}
-          <section className="sx-section">
-            <div className="p-6 rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-xs flex flex-col md:flex-row items-center justify-between gap-6">
-              <div className="flex items-center gap-5">
-                <div className="p-3 bg-white rounded-xl border border-[var(--line)] shadow-xs shrink-0">
-                  <QRCodeSVG value={shopQrUrl} size={68} level="M" />
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--emerald)] px-2 py-0.5 rounded-md bg-[var(--emerald-soft)] border border-[var(--emerald)]/20">
-                      Counter QR Active
-                    </span>
-                    <span className="font-mono text-xs font-bold text-[var(--ink)] bg-[var(--surface-muted)] px-2 py-0.5 rounded-md border border-[var(--line)]">
-                      {shopPublicId}
-                    </span>
-                  </div>
-                  <h3 className="text-base font-semibold text-[var(--ink)] mt-1.5" style={{ fontFamily: 'var(--serif)' }}>
-                    Permanent Desk Standee Poster
-                  </h3>
-                  <p className="text-xs text-[var(--ink-muted)] mt-0.5">
-                    Customers scan this counter QR with their mobile camera to immediately route prints to this shop.
-                  </p>
-                </div>
+          <div className="mt-5 p-5 rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-xs flex flex-col md:flex-row items-center justify-between gap-5">
+            <div className="flex items-center gap-4">
+              <div className="p-2.5 bg-white rounded-xl border border-[var(--line)] shadow-xs shrink-0">
+                <QRCodeSVG value={shopQrUrl} size={60} level="M" />
               </div>
-
-              <div className="flex items-center gap-3 w-full md:w-auto">
-                <button
-                  type="button"
-                  onClick={() => setIsStandeeModalOpen(true)}
-                  className="sx-button justify-center text-xs py-2.5 px-4 w-full md:w-auto cursor-pointer"
-                >
-                  <Printer size={15} /> Print Desk Standee
-                </button>
-              </div>
-            </div>
-          </section>
-
-          {/* Queue */}
-          <section className="sx-section">
-            <div className="flex items-end justify-between">
               <div>
-                <h2 className="text-xl font-medium text-[var(--ink)]" style={{ fontFamily: 'var(--serif)' }}>
-                  Next in line
-                </h2>
-              </div>
-              <Link className="text-sm font-medium text-[var(--ink-secondary)] hover:text-[var(--ink)]" to="/shop/queue">Open queue</Link>
-            </div>
-
-            <div className="sx-list">
-              {queue.slice(0, 5).map((job, index) => (
-                <div className="sx-row" key={job.id}>
-                  <div className="flex gap-4">
-                    <span className="text-[var(--emerald)] font-mono font-bold">{String(index + 1).padStart(2, '0')}</span>
-                    <div>
-                      <strong className="text-[var(--ink)] font-medium">{job.fileName}</strong>
-                      <p className="mt-1 text-xs text-[var(--ink-muted)]">{job.printId} · {formatRelativeTime(job.createdAt)}</p>
-                    </div>
-                  </div>
-                  <span className="sx-status">{job.status.replaceAll('_', ' ')}</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--emerald)] px-2 py-0.5 rounded-md bg-[var(--emerald-soft)] border border-[var(--emerald)]/20">
+                    Counter QR Active
+                  </span>
+                  <span className="font-mono text-xs font-bold text-[var(--ink)] bg-[var(--surface-muted)] px-2 py-0.5 rounded-md border border-[var(--line)]">
+                    {shopPublicId}
+                  </span>
                 </div>
-              ))}
-              {queue.length === 0 && (
-                <div className="sx-panel text-[var(--ink-secondary)] mt-4">The queue is clear.</div>
-              )}
-            </div>
-          </section>
-
-          {/* Hardware Printers Registry Panel */}
-          <section className="sx-section">
-            <div className="flex items-end justify-between mb-4">
-              <div>
-                <h2 className="text-xl font-medium text-[var(--ink)] flex items-center gap-2" style={{ fontFamily: 'var(--serif)' }}>
-                  <Printer size={20} className="text-[var(--ink)]" />
-                  Hardware Printers
-                </h2>
-                <p className="text-xs text-[var(--ink-muted)] mt-0.5">
-                  Registered network spoolers (RAW Socket 9100 / IPP 631) for direct backend streaming.
+                <h3 className="text-base font-semibold text-[var(--ink)] mt-1" style={{ fontFamily: 'var(--serif)' }}>
+                  Permanent Desk Standee Poster
+                </h3>
+                <p className="text-xs text-[var(--ink-muted)]">
+                  Customers scan this counter QR with their mobile camera to route print jobs directly here.
                 </p>
               </div>
-              <button
-                type="button"
-                onClick={() => setIsAddModalOpen(true)}
-                className="text-xs font-semibold text-[var(--ink)] px-3 py-1.5 rounded-lg border border-[var(--line)] hover:bg-[var(--surface-muted)] transition-colors flex items-center gap-1.5 cursor-pointer"
-              >
-                <Plus size={14} /> Add Printer
-              </button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {printers.map((p) => (
-                <div key={p.id} className="p-4 rounded-xl border border-[var(--line)] bg-[var(--surface)] flex flex-col justify-between gap-3 shadow-xs">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <strong className="text-sm font-semibold text-[var(--ink)]">{p.printerName}</strong>
-                        {p.printerColorCapable && (
-                          <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400 font-semibold border border-blue-500/20 flex items-center gap-1">
-                            <Palette size={10} /> Color
-                          </span>
-                        )}
+            <button
+              type="button"
+              onClick={() => setIsStandeeModalOpen(true)}
+              className="sx-button justify-center text-xs py-2.5 px-4 w-full md:w-auto cursor-pointer shrink-0"
+            >
+              <Printer size={14} /> Print Desk Standee
+            </button>
+          </div>
+
+          {/* 2-Column Balanced Dashboard Grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mt-6">
+            
+            {/* Left: Next in Line / Queue */}
+            <div className="lg:col-span-7 flex flex-col gap-3">
+              <div className="flex items-center justify-between pb-1">
+                <div>
+                  <h2 className="text-lg font-semibold text-[var(--ink)]" style={{ fontFamily: 'var(--serif)' }}>
+                    Next in Line
+                  </h2>
+                  <p className="text-xs text-[var(--ink-muted)]">Incoming customer print sessions (FIFO).</p>
+                </div>
+                <Link className="text-xs font-medium text-[var(--ink-secondary)] hover:text-[var(--ink)]" to="/shop/queue">
+                  Open queue →
+                </Link>
+              </div>
+
+              <div className="sx-list">
+                {queue.slice(0, 5).map((job, index) => (
+                  <div className="sx-row" key={job.id}>
+                    <div className="flex gap-3.5 items-center">
+                      <span className="text-[var(--emerald)] font-mono font-bold text-xs">{String(index + 1).padStart(2, '0')}</span>
+                      <div>
+                        <strong className="text-sm text-[var(--ink)] font-medium block">{job.fileName}</strong>
+                        <p className="text-xs text-[var(--ink-muted)]">{job.printId} · {formatRelativeTime(job.createdAt)}</p>
                       </div>
-                      <p className="text-xs font-mono text-[var(--ink-muted)] mt-1">{p.printerEndpoint} ({p.printerProtocol.toUpperCase()})</p>
+                    </div>
+                    <span className="sx-status">{job.status.replaceAll('_', ' ')}</span>
+                  </div>
+                ))}
+                {queue.length === 0 && (
+                  <div className="p-6 rounded-2xl border border-[var(--line)] bg-[var(--surface)] text-center text-xs text-[var(--ink-muted)]">
+                    The queue is clear. Ready for next customer.
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Right: Hardware Printers Panel */}
+            <div className="lg:col-span-5 flex flex-col gap-3">
+              <div className="flex items-center justify-between pb-1">
+                <div>
+                  <h2 className="text-lg font-semibold text-[var(--ink)] flex items-center gap-1.5" style={{ fontFamily: 'var(--serif)' }}>
+                    <Printer size={17} className="text-[var(--ink)]" />
+                    Hardware Spoolers
+                  </h2>
+                  <p className="text-xs text-[var(--ink-muted)]">Registered network endpoints (Port 9100 / 631).</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsAddModalOpen(true)}
+                  className="text-xs font-semibold text-[var(--ink)] px-2.5 py-1.5 rounded-lg border border-[var(--line)] hover:bg-[var(--surface-muted)] transition-colors flex items-center gap-1 cursor-pointer"
+                >
+                  <Plus size={13} /> Add
+                </button>
+              </div>
+
+              <div className="flex flex-col gap-3">
+                {printers.map((p) => (
+                  <div key={p.id} className="p-4 rounded-xl border border-[var(--line)] bg-[var(--surface)] flex flex-col justify-between gap-2.5 shadow-xs">
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <strong className="text-sm font-semibold text-[var(--ink)]">{p.printerName}</strong>
+                          {p.printerColorCapable && (
+                            <span className="text-[10px] px-1.5 py-0.2 rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400 font-semibold border border-blue-500/20 flex items-center gap-1">
+                              <Palette size={10} /> Color
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs font-mono text-[var(--ink-muted)] mt-0.5">{p.printerEndpoint} ({p.printerProtocol.toUpperCase()})</p>
+                      </div>
+
+                      <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold capitalize ${
+                        p.printerStatus === 'online'
+                          ? 'bg-[var(--emerald-soft)] text-[var(--emerald)]'
+                          : p.printerStatus === 'offline'
+                          ? 'bg-[var(--danger-soft)] text-[var(--danger)]'
+                          : 'bg-[var(--surface-muted)] text-[var(--ink-muted)]'
+                      }`}>
+                        {p.printerStatus}
+                      </span>
                     </div>
 
-                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold capitalize ${
-                      p.printerStatus === 'online'
-                        ? 'bg-[var(--emerald-soft)] text-[var(--emerald)]'
-                        : p.printerStatus === 'offline'
-                        ? 'bg-[var(--danger-soft)] text-[var(--danger)]'
-                        : 'bg-[var(--surface-muted)] text-[var(--ink-muted)]'
-                    }`}>
-                      {p.printerStatus}
-                    </span>
-                  </div>
+                    <div className="flex items-center justify-between pt-2 border-t border-[var(--line)] text-xs">
+                      <button
+                        type="button"
+                        disabled={testingId === p.id}
+                        onClick={() => handleTestPrinter(p.id)}
+                        className="text-[var(--ink)] font-medium hover:underline flex items-center gap-1 cursor-pointer text-xs"
+                      >
+                        <RefreshCw size={11} className={testingId === p.id ? 'animate-spin' : ''} />
+                        {testingId === p.id ? 'Testing...' : 'Test Connection'}
+                      </button>
 
-                  <div className="flex items-center justify-between pt-3 border-t border-[var(--line)] text-xs">
+                      <button
+                        type="button"
+                        onClick={() => handleDeletePrinter(p.id)}
+                        className="text-[var(--danger)] hover:opacity-80 cursor-pointer p-1"
+                        title="Remove Printer"
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+
+                {printers.length === 0 && !loadingPrinters && (
+                  <div className="p-5 rounded-xl border border-[var(--line)] bg-[var(--surface)] text-center text-xs text-[var(--ink-muted)] flex flex-col items-center">
+                    <Server size={20} className="text-[var(--ink-muted)] mb-1.5" />
+                    <p className="font-semibold text-[var(--ink)]">Virtual Spooler Active</p>
+                    <p className="mt-0.5">Documents will spool to internal loopback until a physical printer is added.</p>
                     <button
                       type="button"
-                      disabled={testingId === p.id}
-                      onClick={() => handleTestPrinter(p.id)}
-                      className="text-[var(--ink)] font-medium hover:underline flex items-center gap-1 cursor-pointer"
+                      onClick={() => setIsAddModalOpen(true)}
+                      className="mt-2.5 inline-flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg bg-[var(--ink)] text-[var(--surface)] cursor-pointer"
                     >
-                      <RefreshCw size={12} className={testingId === p.id ? 'animate-spin' : ''} />
-                      {testingId === p.id ? 'Testing ping...' : 'Test Connection'}
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => handleDeletePrinter(p.id)}
-                      className="text-[var(--danger)] hover:opacity-80 cursor-pointer p-1"
-                      title="Remove Printer"
-                    >
-                      <Trash2 size={13} />
+                      <Plus size={12} /> Add Printer IP
                     </button>
                   </div>
-                </div>
-              ))}
-
-              {printers.length === 0 && !loadingPrinters && (
-                <div className="md:col-span-2 p-5 rounded-xl border border-[var(--line)] bg-[var(--surface)] text-center text-xs text-[var(--ink-muted)]">
-                  <Server size={22} className="mx-auto text-[var(--ink-muted)] mb-2" />
-                  <p className="font-medium text-[var(--ink)]">No Physical Printers Registered</p>
-                  <p className="mt-1">SecureXerox will use the internal virtual loopback spooler until you add a physical device.</p>
-                  <button
-                    type="button"
-                    onClick={() => setIsAddModalOpen(true)}
-                    className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg bg-[var(--ink)] text-[var(--surface)] cursor-pointer"
-                  >
-                    <Plus size={13} /> Add Network Printer
-                  </button>
-                </div>
-              )}
+                )}
+              </div>
             </div>
-          </section>
+
+          </div>
 
           {/* Info */}
           <aside className="sx-infobar">
