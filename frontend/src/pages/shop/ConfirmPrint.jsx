@@ -144,87 +144,87 @@ export default function ConfirmPrint() {
         <div className="sx-wrap max-w-4xl mx-auto">
           
           {/* Header */}
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-5 pb-4 border-b border-[var(--line)]">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8 pb-6 border-b border-[var(--line)]">
             <div>
               <p className="sx-kicker flex items-center gap-2">
                 <ShieldCheck size={14} className="text-[var(--emerald)]" />
                 Zero-Trust Hardware Spooler
               </p>
-              <h1 className="sx-title text-2xl md:text-3xl">
+              <h1 className="sx-title text-3xl md:text-4xl">
                 Print <em>Confirmation</em>
               </h1>
-              <p className="sx-lede text-xs mt-0.5">
+              <p className="sx-lede text-sm mt-1">
                 Metadata-only verification. Raw bytes stream directly to hardware with zero browser exposure.
               </p>
             </div>
 
-            <div className="flex items-center gap-2.5">
-              <div className="flex items-center gap-2 px-3 py-1 rounded-xl border border-[var(--line)] bg-[var(--surface)] text-xs font-semibold text-[var(--ink-muted)]">
-                <Clock size={13} className="text-[var(--amber)]" />
-                <span>Expires: </span>
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-[var(--line)] bg-[var(--surface)] text-xs font-semibold text-[var(--ink-muted)]">
+                <Clock size={14} className="text-[var(--amber)]" />
+                <span>Expires in: </span>
                 <span className="font-mono text-[var(--ink)] font-bold">{countdown.formatted}</span>
               </div>
               <Badge status={job.status} />
             </div>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
             
             {/* Left Column: Metadata Verification Parameters */}
-            <div className="lg:col-span-7 flex flex-col gap-4">
+            <div className="lg:col-span-7 flex flex-col gap-6">
               
               {/* Job Specification Card */}
-              <div className="p-5 rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-xs">
-                <h2 className="text-xs font-bold uppercase tracking-widest text-[var(--ink-muted)] mb-3 flex items-center gap-2">
-                  <FileText size={14} className="text-[var(--ink)]" />
+              <div className="p-6 rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-xs">
+                <h2 className="text-xs font-bold uppercase tracking-widest text-[var(--ink-muted)] mb-4 flex items-center gap-2">
+                  <FileText size={15} className="text-[var(--ink)]" />
                   Job Parameters (Read-Only)
                 </h2>
 
-                <div className="grid grid-cols-2 gap-3 text-sm">
-                  <div className="p-3 rounded-xl bg-[var(--surface-muted)] border border-[var(--line)]/50">
-                    <span className="text-[11px] text-[var(--ink-muted)] block mb-0.5">File Name</span>
-                    <span className="font-semibold text-xs text-[var(--ink)] break-all">{job.fileName}</span>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div className="p-3.5 rounded-xl bg-[var(--surface-muted)] border border-[var(--line)]/50">
+                    <span className="text-xs text-[var(--ink-muted)] block mb-1">File Name</span>
+                    <span className="font-semibold text-[var(--ink)] break-all">{job.fileName}</span>
                   </div>
 
-                  <div className="p-3 rounded-xl bg-[var(--surface-muted)] border border-[var(--line)]/50">
-                    <span className="text-[11px] text-[var(--ink-muted)] block mb-0.5">Document Format</span>
-                    <span className="font-semibold text-xs text-[var(--ink)] uppercase font-mono">{job.fileType || 'PDF'}</span>
+                  <div className="p-3.5 rounded-xl bg-[var(--surface-muted)] border border-[var(--line)]/50">
+                    <span className="text-xs text-[var(--ink-muted)] block mb-1">Document Format</span>
+                    <span className="font-semibold text-[var(--ink)] uppercase font-mono">{job.fileType || 'PDF'}</span>
                   </div>
 
-                  <div className="p-3 rounded-xl bg-[var(--surface-muted)] border border-[var(--line)]/50">
-                    <span className="text-[11px] text-[var(--ink-muted)] block mb-0.5">Copies Required</span>
-                    <span className="font-semibold text-xs text-[var(--ink)] font-mono">{job.copies} {job.copies > 1 ? 'copies' : 'copy'}</span>
+                  <div className="p-3.5 rounded-xl bg-[var(--surface-muted)] border border-[var(--line)]/50">
+                    <span className="text-xs text-[var(--ink-muted)] block mb-1">Copies Required</span>
+                    <span className="font-semibold text-[var(--ink)] font-mono text-base">{job.copies} {job.copies > 1 ? 'copies' : 'copy'}</span>
                   </div>
 
-                  <div className="p-3 rounded-xl bg-[var(--surface-muted)] border border-[var(--line)]/50">
-                    <span className="text-[11px] text-[var(--ink-muted)] block mb-0.5">Color Mode</span>
-                    <span className={`font-semibold text-xs inline-flex items-center gap-1 ${job.color_mode === 'Color' ? 'text-blue-600 dark:text-blue-400' : 'text-[var(--ink)]'}`}>
-                      <Palette size={12} />
+                  <div className="p-3.5 rounded-xl bg-[var(--surface-muted)] border border-[var(--line)]/50">
+                    <span className="text-xs text-[var(--ink-muted)] block mb-1">Color Mode</span>
+                    <span className={`font-semibold inline-flex items-center gap-1.5 ${job.color_mode === 'Color' ? 'text-blue-600 dark:text-blue-400' : 'text-[var(--ink)]'}`}>
+                      <Palette size={13} />
                       {job.color_mode}
                     </span>
                   </div>
 
-                  <div className="p-3 rounded-xl bg-[var(--surface-muted)] border border-[var(--line)]/50">
-                    <span className="text-[11px] text-[var(--ink-muted)] block mb-0.5">Paper & Layout</span>
-                    <span className="font-semibold text-xs text-[var(--ink)]">{job.paper_size} • {job.orientation}</span>
+                  <div className="p-3.5 rounded-xl bg-[var(--surface-muted)] border border-[var(--line)]/50">
+                    <span className="text-xs text-[var(--ink-muted)] block mb-1">Paper Size & Layout</span>
+                    <span className="font-semibold text-[var(--ink)]">{job.paper_size} • {job.orientation}</span>
                   </div>
 
-                  <div className="p-3 rounded-xl bg-[var(--surface-muted)] border border-[var(--line)]/50">
-                    <span className="text-[11px] text-[var(--ink-muted)] block mb-0.5">Page Range</span>
-                    <span className="font-semibold text-xs text-[var(--ink)] font-mono">{job.page_range}</span>
+                  <div className="p-3.5 rounded-xl bg-[var(--surface-muted)] border border-[var(--line)]/50">
+                    <span className="text-xs text-[var(--ink-muted)] block mb-1">Page Range</span>
+                    <span className="font-semibold text-[var(--ink)] font-mono">{job.page_range}</span>
                   </div>
                 </div>
 
-                <div className="mt-3 pt-3 border-t border-[var(--line)] flex items-center justify-between text-xs text-[var(--ink-muted)]">
+                <div className="mt-4 pt-4 border-t border-[var(--line)] flex items-center justify-between text-xs text-[var(--ink-muted)]">
                   <span>Customer Identifier:</span>
                   <span className="font-mono font-bold text-[var(--ink)]">{maskedCustomerId}</span>
                 </div>
               </div>
 
               {/* Hardware Target Selector */}
-              <div className="p-5 rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-xs">
-                <h2 className="text-xs font-bold uppercase tracking-widest text-[var(--ink-muted)] mb-2.5 flex items-center gap-2">
-                  <Printer size={14} className="text-[var(--ink)]" />
+              <div className="p-6 rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-xs">
+                <h2 className="text-xs font-bold uppercase tracking-widest text-[var(--ink-muted)] mb-3 flex items-center gap-2">
+                  <Printer size={15} className="text-[var(--ink)]" />
                   Target Hardware Destination
                 </h2>
 
@@ -278,25 +278,25 @@ export default function ConfirmPrint() {
             </div>
 
             {/* Right Column: Execution Terminal & Action */}
-            <div className="lg:col-span-5 flex flex-col gap-4">
+            <div className="lg:col-span-5 flex flex-col gap-6">
               
               {/* Terminal Logs Card */}
-              <div className="p-5 rounded-2xl border border-[var(--line)] bg-[var(--surface)] flex-1 flex flex-col justify-between shadow-xs">
+              <div className="p-6 rounded-2xl border border-[var(--line)] bg-[var(--surface)] flex-1 flex flex-col justify-between">
                 <div>
-                  <h2 className="text-xs font-bold uppercase tracking-widest text-[var(--ink-muted)] mb-2.5 flex items-center gap-2">
-                    <Cpu size={14} className="text-[var(--ink)]" />
+                  <h2 className="text-xs font-bold uppercase tracking-widest text-[var(--ink-muted)] mb-3 flex items-center gap-2">
+                    <Cpu size={15} className="text-[var(--ink)]" />
                     Hardware Spooling Pipeline
                   </h2>
 
                   {/* Terminal Console */}
-                  <div className="p-3.5 rounded-xl bg-[var(--ink)] text-[var(--surface)] font-mono text-[11px] leading-relaxed min-h-[150px] max-h-[210px] overflow-y-auto flex flex-col justify-end">
+                  <div className="p-4 rounded-xl bg-[var(--ink)] text-[var(--surface)] font-mono text-xs leading-relaxed min-h-[220px] max-h-[300px] overflow-y-auto flex flex-col justify-end">
                     {spoolLogs.length === 0 ? (
-                      <div className="text-[var(--surface)]/50 italic text-[11px]">
+                      <div className="text-[var(--surface)]/50 italic">
                         Ready to stream.<br/>
                         Click "Execute Hardware Print" to decrypt bytes in RAM and transmit directly to physical spooler.
                       </div>
                     ) : (
-                      <div className="flex flex-col gap-1">
+                      <div className="flex flex-col gap-1.5">
                         {spoolLogs.map((log, idx) => (
                           <div key={idx} className="text-[var(--surface)]/90">
                             {log}
@@ -304,7 +304,7 @@ export default function ConfirmPrint() {
                         ))}
                         {isSpooling && (
                           <div className="flex items-center gap-2 text-[var(--amber)] mt-1 animate-pulse">
-                            <RefreshCw size={11} className="animate-spin" />
+                            <RefreshCw size={12} className="animate-spin" />
                             <span>Transmitting raw packets...</span>
                           </div>
                         )}
@@ -315,30 +315,30 @@ export default function ConfirmPrint() {
 
                 {/* Error Banner */}
                 {errorMsg && (
-                  <div className="mt-3 p-3 rounded-xl bg-[var(--danger-soft)] border border-[var(--danger)]/20 text-[var(--danger)] text-xs flex items-center gap-2">
-                    <AlertTriangle size={15} className="shrink-0" />
+                  <div className="mt-4 p-3.5 rounded-xl bg-[var(--danger-soft)] border border-[var(--danger)]/20 text-[var(--danger)] text-xs flex items-center gap-2.5">
+                    <AlertTriangle size={16} className="shrink-0" />
                     <span>{errorMsg}</span>
                   </div>
                 )}
 
                 {/* Execution Buttons */}
-                <div className="mt-4 flex flex-col gap-2.5">
+                <div className="mt-6 flex flex-col gap-3">
                   {!isCompleted ? (
                     <>
                       <button
                         type="button"
                         onClick={handleExecutePrint}
                         disabled={isSpooling}
-                        className="sx-button justify-center w-full py-3 text-sm shadow-sm cursor-pointer"
+                        className="sx-button justify-center w-full py-3.5 text-base shadow-sm"
                       >
                         {isSpooling ? (
                           <>
-                            <RefreshCw size={15} className="animate-spin" />
+                            <RefreshCw size={16} className="animate-spin" />
                             Spooling to Hardware...
                           </>
                         ) : (
                           <>
-                            <Printer size={16} />
+                            <Printer size={18} />
                             Execute Hardware Print
                           </>
                         )}
@@ -348,25 +348,25 @@ export default function ConfirmPrint() {
                         type="button"
                         onClick={handleCancelAndDestroy}
                         disabled={isSpooling}
-                        className="w-full py-2 text-xs text-[var(--danger)] hover:bg-[var(--danger-soft)] rounded-xl transition-colors font-semibold flex items-center justify-center gap-1.5 cursor-pointer"
+                        className="w-full py-2.5 text-xs text-[var(--danger)] hover:bg-[var(--danger-soft)] rounded-xl transition-colors font-semibold flex items-center justify-center gap-2 cursor-pointer"
                       >
-                        <Trash2 size={13} />
+                        <Trash2 size={14} />
                         Cancel & Shred Memory
                       </button>
                     </>
                   ) : (
-                    <div className="flex flex-col gap-2.5">
-                      <div className="p-3.5 rounded-xl bg-[var(--emerald-soft)] border border-[var(--emerald)]/20 text-[var(--emerald)] text-center text-xs font-semibold flex items-center justify-center gap-2">
-                        <CheckCircle2 size={15} />
-                        Print Job Finished & Memory Shredded
+                    <div className="flex flex-col gap-3">
+                      <div className="p-4 rounded-xl bg-[var(--emerald-soft)] border border-[var(--emerald)]/20 text-[var(--emerald)] text-center text-xs font-semibold flex items-center justify-center gap-2">
+                        <CheckCircle2 size={16} />
+                        Print Job Finished & Vault Memory Shredded
                       </div>
 
                       <button
                         type="button"
                         onClick={() => navigate('/shop/dashboard')}
-                        className="sx-button justify-center w-full text-xs py-2.5 cursor-pointer"
+                        className="sx-button justify-center w-full"
                       >
-                        Return to Shop Dashboard <ArrowRight size={14} />
+                        Return to Shop Dashboard <ArrowRight size={15} />
                       </button>
                     </div>
                   )}
