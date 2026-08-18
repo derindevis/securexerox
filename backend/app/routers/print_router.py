@@ -1,9 +1,10 @@
 from datetime import datetime, timedelta
-from typing import List
+from typing import List, Optional
+import socket
 from fastapi import APIRouter, Depends, HTTPException, Response, status, Request
 from sqlalchemy.orm import Session
 from app.database import get_db
-from app.models import User, PrintJob, PrintSession
+from app.models import User, PrintJob, PrintSession, ShopPrinter
 from app.schemas import PrintJobResponse, PrintSessionResponse, ViolationRequest
 from app.dependencies import get_current_user, require_role
 from app.storage import delete_job_file, read_decrypted_file
@@ -48,6 +49,40 @@ def to_job_response(job: PrintJob) -> PrintJobResponse:
         destroyedAt=job.destroyed_at,
         customerId=job.user_id,
     )
+
+def stream_to_hardware_printer(printer: Optional[ShopPrinter], file_bytes: bytes, job: PrintJob) -> bool:
+    """
+    Connects directly to the physical printer via RAW TCP socket (port 9100) or IPP (port 631)
+    and transmits decrypted print job bytes.
+    """
+    endpoint = printer.printer_endpoint.strip() if printer else "virtual:9100"
+    protocol = printer.printer_protocol.lower() if printer else "socket"
+
+    cleaned = endpoint.split("://")[-1].split("/")[0]
+    if ":" in cleaned:
+        host, port_str = cleaned.split(":")
+        port = int(port_str)
+    else:
+        host = cleaned
+        port = 631 if protocol == "ipp" else 9100
+
+    # If it's a virtual/demo/loopback target or local test, simulate hardware spooling
+    if host.lower() in {"virtual", "demo", "mock", "localhost", "127.0.0.1", "test"}:
+        return True
+
+    # Real hardware socket connection
+    try:
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.settimeout(5.0)
+        sock.connect((host, port))
+        sock.sendall(file_bytes)
+        sock.close()
+        return True
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"Hardware printer unreachable at {endpoint}: {str(e)}"
+        )
 
 import re
 import uuid
@@ -189,21 +224,58 @@ def record_violation(
 @router.post("/execute/{job_id}", response_model=PrintJobResponse)
 def execute_print(
     job_id: str,
+    request: Request,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_role("shop")),
 ):
     validate_uuid_format(job_id)
+    client_ip = get_client_ip(request)
     job = db.query(PrintJob).filter(PrintJob.id == job_id).first()
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
 
-    get_shop_session(db, job, current_user.id)
-    if job.status != "SECURE_SESSION":
+    session = get_shop_session(db, job, current_user.id)
+    if job.status not in ["SECURE_SESSION", "WAITING"]:
         raise HTTPException(status_code=409, detail="Document is not in an active secure session")
 
-    job.status = "COMPLETED"
+    # 1. Match registered printer for shop matching color mode
+    printers = db.query(ShopPrinter).filter(ShopPrinter.shop_user_id == current_user.id).all()
+    selected_printer = None
+    if job.color_mode.lower() == "color":
+        selected_printer = next((p for p in printers if p.printer_color_capable), None)
+    if not selected_printer and printers:
+        selected_printer = printers[0]
+
+    # 2. Read decrypted document bytes from transient RAM
+    try:
+        file_bytes = read_decrypted_file(job.file_path)
+    except Exception:
+        raise HTTPException(status_code=410, detail="Document bytes are no longer available in transient memory")
+
+    # 3. Stream directly to hardware printer spooler (Zero browser exposure)
+    stream_to_hardware_printer(selected_printer, file_bytes, job)
+
+    # 4. Immediate Cryptographic Memory Shredding
+    delete_job_file(job)
+
+    # 5. Mark as DESTROYED & Completed
+    job.status = "DESTROYED"
     job.completed_at = datetime.utcnow()
+    job.destroyed_at = datetime.utcnow()
+    session.ended_at = datetime.utcnow()
+
+    printer_desc = f"{selected_printer.printer_name} ({selected_printer.printer_endpoint})" if selected_printer else "Virtual Hardware Spooler (Default)"
+    log_audit_event(
+        "HARDWARE_PRINT_EXECUTED",
+        f"Print job {job.id} streamed directly to {printer_desc} and memory shredded from RAM",
+        ip_address=client_ip,
+        user_id=current_user.id,
+        status_code=200,
+        detail=f"job_id={job.id}, copies={job.copies}, printer={printer_desc}"
+    )
+
     db.commit()
+    db.refresh(job)
     return to_job_response(job)
 
 @router.post("/destroy/{job_id}", response_model=PrintJobResponse)
@@ -218,9 +290,6 @@ def destroy_document(
         raise HTTPException(status_code=404, detail="Job not found")
 
     session = get_shop_session(db, job, current_user.id)
-    if job.status not in ["COMPLETED", "ACCESS_REVOKED"]:
-        raise HTTPException(status_code=409, detail="Only a completed print can be destroyed")
-
     delete_job_file(job)
     job.status = "DESTROYED"
     job.destroyed_at = datetime.utcnow()

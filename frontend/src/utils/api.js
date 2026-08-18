@@ -81,16 +81,13 @@ export const api = {
   destroyDocument: (jobId) => request(`/print/destroy/${jobId}`, { method: 'POST' }),
   getQueue: () => request('/print/queue'),
   getHistory: () => request('/print/history'),
-  fetchDocumentBlob: async (jobId) => {
-    const token = getAuthToken();
-    const response = await fetch(`${API_BASE}/print/stream/${jobId}`, {
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-    });
-    if (!response.ok) {
-      throw new Error('Failed to stream document for printing');
-    }
-    return response.blob();
-  },
+
+  // Hardware Printer Registry
+  getPrinters: () => request('/printers'),
+  createPrinter: (printerData) => request('/printers', { method: 'POST', body: JSON.stringify(printerData) }),
+  updatePrinter: (printerId, printerData) => request(`/printers/${printerId}`, { method: 'PUT', body: JSON.stringify(printerData) }),
+  deletePrinter: (printerId) => request(`/printers/${printerId}`, { method: 'DELETE' }),
+  testPrinter: (printerId) => request(`/printers/${printerId}/test`, { method: 'POST' }),
 };
 
 

@@ -202,3 +202,59 @@ class PrintSessionResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+# Hardware Printer Registry Schemas
+class ShopPrinterCreate(BaseModel):
+    printerName: str
+    printerProtocol: str = "socket"  # "socket" or "ipp"
+    printerEndpoint: str  # e.g., "192.168.1.150:9100" or "192.168.1.150:631/ipp/print"
+    printerColorCapable: bool = False
+
+    @field_validator("printerName")
+    @classmethod
+    def validate_name(cls, v: str) -> str:
+        s = sanitize_text(v)
+        if not s or len(s) > 100:
+            raise ValueError("Printer name must be between 1 and 100 characters")
+        return s
+
+    @field_validator("printerProtocol")
+    @classmethod
+    def validate_protocol(cls, v: str) -> str:
+        if v.lower() not in {"socket", "ipp"}:
+            raise ValueError("Protocol must be 'socket' or 'ipp'")
+        return v.lower()
+
+    @field_validator("printerEndpoint")
+    @classmethod
+    def validate_endpoint(cls, v: str) -> str:
+        s = sanitize_text(v)
+        if not s or len(s) > 255:
+            raise ValueError("Printer endpoint must be valid")
+        return s
+
+class ShopPrinterUpdate(BaseModel):
+    printerName: Optional[str] = None
+    printerProtocol: Optional[str] = None
+    printerEndpoint: Optional[str] = None
+    printerColorCapable: Optional[bool] = None
+
+class ShopPrinterResponse(BaseModel):
+    id: str
+    shopUserId: str
+    printerName: str
+    printerProtocol: str
+    printerEndpoint: str
+    printerColorCapable: bool
+    printerStatus: str
+    printerLastTestedAt: Optional[datetime] = None
+    createdAt: datetime
+
+    class Config:
+        from_attributes = True
+
+class PrinterTestResponse(BaseModel):
+    success: bool
+    printerStatus: str
+    message: str
+    latencyMs: Optional[int] = None

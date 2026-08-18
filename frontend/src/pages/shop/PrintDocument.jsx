@@ -24,7 +24,7 @@ export default function PrintDocument() {
 
   const begin = async () => {
     await startSecureSession(job.id, job.printId);
-    nav(`/shop/secure-print/${job.id}`);
+    nav(`/shop/confirm-print/${job.id}`);
   };
 
   return (

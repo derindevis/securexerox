@@ -23,6 +23,7 @@ class User(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
     jobs = relationship("PrintJob", back_populates="customer")
+    printers = relationship("ShopPrinter", back_populates="shop_user", cascade="all, delete-orphan")
 
 class PrintJob(Base):
     __tablename__ = "print_jobs"
@@ -67,3 +68,19 @@ class PrintSession(Base):
     security_events = Column(JSON, default=list)
 
     job = relationship("PrintJob", back_populates="sessions")
+
+class ShopPrinter(Base):
+    __tablename__ = "shop_printers"
+
+    id = Column(String, primary_key=True, default=generate_uuid)
+    shop_user_id = Column(String, ForeignKey("users.id"), nullable=False, index=True)
+    
+    printer_name = Column(String, nullable=False)
+    printer_protocol = Column(String, nullable=False, default="socket")  # "socket" (port 9100) or "ipp" (port 631)
+    printer_endpoint = Column(String, nullable=False)  # e.g., "192.168.1.150:9100" or "192.168.1.150:631/ipp/print"
+    printer_color_capable = Column(Boolean, default=False, nullable=False)
+    printer_status = Column(String, default="untested", nullable=False)  # "untested", "online", "offline"
+    printer_last_tested_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    shop_user = relationship("User", back_populates="printers")

@@ -1,13 +1,14 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.sessions import SessionMiddleware
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 from apscheduler.schedulers.background import BackgroundScheduler
 
 from app.database import engine, Base, SessionLocal
 from app.config import settings
-from app.routers import auth_router, jobs_router, print_router
+from app.routers import auth_router, jobs_router, print_router, printer_router
 from app.storage import cleanup_expired_jobs
 
 # Create DB tables
@@ -55,7 +56,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[origin.strip() for origin in settings.ALLOWED_ORIGINS.split(",") if origin.strip()],
     allow_credentials=False,
-    allow_methods=["GET", "POST"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["Authorization", "Content-Type"],
 )
 
@@ -152,9 +153,12 @@ async def audit_logging_middleware(request, call_next):
 app.include_router(auth_router.router)
 app.include_router(jobs_router.router)
 app.include_router(print_router.router)
+app.include_router(printer_router.router)
 
 @app.get("/")
 def root():
     return {"message": "SecureXerox API is running", "docs": "/docs"}
+
+@app.get("/healthz")
 def healthz():
     return {"status": "ok"}
