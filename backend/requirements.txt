@@ -13,4 +13,6 @@ authlib
 psycopg[binary]
 itsdangerous
 email-validator
+psycopg2-binary
+
 
