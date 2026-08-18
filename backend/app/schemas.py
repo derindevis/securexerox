@@ -60,6 +60,7 @@ class GoogleAuthRequest(BaseModel):
     email: Optional[EmailStr] = None
     name: Optional[str] = None
     role: str = "customer"
+    mode: Optional[str] = "signin"
 
     @field_validator("role")
     @classmethod

@@ -16,6 +16,8 @@ export default function OAuthCallback() {
         const accessToken = hashParams.get('access_token') || searchParams.get('access_token');
         const role = sessionStorage.getItem('sx_oauth_role') || 'customer';
 
+        const mode = sessionStorage.getItem('sx_oauth_mode') || 'signin';
+
         if (!accessToken) {
           setErrorMsg('No authentication token received.');
           setTimeout(() => navigate('/login', { replace: true }), 2500);
@@ -36,11 +38,20 @@ export default function OAuthCallback() {
         }
 
         // Exchange with backend to obtain app JWT & register/sync user
-        const res = await api.googleAuth({ access_token: accessToken, token: accessToken, email, name, role });
+        const res = await api.googleAuth({
+          access_token: accessToken,
+          token: accessToken,
+          email,
+          name,
+          role,
+          mode,
+        });
+
         if (res && res.access_token) {
           syncAuthUser(res.user, res.access_token);
-          addToast('Signed in with Google successfully!', 'success');
+          addToast(mode === 'signup' ? 'Account created with Google successfully!' : 'Signed in with Google successfully!', 'success');
           sessionStorage.removeItem('sx_oauth_role');
+          sessionStorage.removeItem('sx_oauth_mode');
           const destination = res.user?.role === 'shop' ? '/shop/dashboard' : '/customer/dashboard';
           navigate(destination, { replace: true });
         } else {
@@ -52,24 +63,72 @@ export default function OAuthCallback() {
         setErrorMsg(msg);
         addToast(msg, 'error');
         setAuthToken(null);
-        setTimeout(() => navigate('/login', { replace: true }), 3000);
+        
+        const isUnregistered = msg.toLowerCase().includes('sign up');
+        const isDuplicate = msg.toLowerCase().includes('already registered') || msg.toLowerCase().includes('sign in');
+        const targetMode = isUnregistered ? 'signup' : (isDuplicate ? 'signin' : null);
+
+        setTimeout(() => {
+          if (targetMode) {
+            navigate(`/login?mode=${targetMode}`, { replace: true });
+          } else {
+            navigate('/login', { replace: true });
+          }
+        }, 3200);
       }
     }
 
     processOAuth();
   }, [navigate, addToast, syncAuthUser]);
 
+  const isUnregistered = errorMsg && errorMsg.toLowerCase().includes('sign up');
+  const isDuplicate = errorMsg && (errorMsg.toLowerCase().includes('already registered') || errorMsg.toLowerCase().includes('sign in'));
+
   return (
     <main className="sx-page">
       <div className="sx-wrap sx-form text-center">
         <p className="sx-kicker">Google Authentication</p>
         <h1 className="sx-title" style={{ fontSize: 'clamp(2.2rem, 4vw, 3.5rem)' }}>
-          {errorMsg ? <>Authentication <em>Issue</em></> : <>Securing your <em>session.</em></>}
+          {errorMsg ? (
+            isUnregistered ? <>Account <em>Not Found</em></> : (
+              isDuplicate ? <>Account <em>Already Exists</em></> : <>Authentication <em>Issue</em></>
+            )
+          ) : (
+            <>Securing your <em>session.</em></>
+          )}
         </h1>
         <p className="sx-lede">
           {errorMsg ? errorMsg : 'Verifying your Google account and initializing your encrypted vault...'}
         </p>
-        {!errorMsg && (
+        {errorMsg ? (
+          <div className="mt-6 flex flex-col sm:flex-row items-center justify-center gap-3">
+            {isUnregistered && (
+              <button
+                type="button"
+                onClick={() => navigate('/login?mode=signup', { replace: true })}
+                className="sx-button justify-center w-full sm:w-auto"
+              >
+                Go to Sign Up
+              </button>
+            )}
+            {isDuplicate && (
+              <button
+                type="button"
+                onClick={() => navigate('/login?mode=signin', { replace: true })}
+                className="sx-button justify-center w-full sm:w-auto"
+              >
+                Go to Sign In
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => navigate('/login', { replace: true })}
+              className="text-sm text-[var(--ink-muted)] hover:text-[var(--ink)] transition-colors py-2 cursor-pointer"
+            >
+              Back to Login
+            </button>
+          </div>
+        ) : (
           <div className="mt-8 flex justify-center">
             <div className="w-8 h-8 border-3 border-[var(--ink)]/20 border-t-[var(--ink)] rounded-full animate-spin"></div>
           </div>

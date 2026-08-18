@@ -159,7 +159,15 @@ def google_auth(auth_data: GoogleAuthRequest, request: Request, db: Session = De
 
     email_clean = email.lower().strip()
     user = db.query(User).filter(User.email == email_clean).first()
-    if not user:
+    mode = (auth_data.mode or "signin").lower().strip()
+
+    if mode == "signup":
+        if user:
+            log_audit_event("AUTH_GOOGLE_SIGNUP_DUPLICATE", f"Google signup attempt for existing user ({email_clean})", ip_address=client_ip, status_code=409)
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="This Google account is already registered. Please sign in instead.",
+            )
         user = User(
             email=email_clean,
             name=name.strip() if name else email_clean.split("@")[0],
@@ -172,6 +180,13 @@ def google_auth(auth_data: GoogleAuthRequest, request: Request, db: Session = De
         db.refresh(user)
         log_audit_event("AUTH_GOOGLE_REGISTER", f"Google user registered ({user.id})", ip_address=client_ip, user_id=user.id, status_code=200)
     else:
+        # Default signin mode: reject if user is not registered yet
+        if not user:
+            log_audit_event("AUTH_GOOGLE_SIGNIN_UNREGISTERED", f"Google signin attempt for unregistered user ({email_clean})", ip_address=client_ip, status_code=404)
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="No SecureXerox account found for this Google email. Please sign up first.",
+            )
         if not user.is_verified:
             user.is_verified = True
             db.commit()
