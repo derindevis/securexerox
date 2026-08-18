@@ -22,8 +22,21 @@ export default function OAuthCallback() {
           return;
         }
 
+        let email = null;
+        let name = null;
+        try {
+          const parts = accessToken.split('.');
+          if (parts.length === 3) {
+            const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
+            email = payload.email || payload.user_metadata?.email || null;
+            name = payload.user_metadata?.full_name || payload.user_metadata?.name || null;
+          }
+        } catch (e) {
+          // fallback
+        }
+
         // Exchange with backend to obtain app JWT & register/sync user
-        const res = await api.googleAuth({ access_token: accessToken, role });
+        const res = await api.googleAuth({ access_token: accessToken, token: accessToken, email, name, role });
         if (res && res.access_token) {
           setAuthToken(res.access_token);
           addToast('Signed in with Google successfully!', 'success');
