@@ -614,9 +614,11 @@ img { max-width: 100%; display: block; }
   border: 1px solid var(--line);
   border-radius: var(--radius);
   box-shadow: var(--shadow-xl);
-  padding: 2rem;
+  padding: 1.25rem 1.5rem;
   max-width: 480px;
   width: 100%;
+  max-height: calc(100vh - 2rem);
+  overflow-y: auto;
   animation: sxSlideUp 0.3s var(--ease-out-expo);
 }
 .sx-modal__header {
