@@ -213,8 +213,10 @@ def get_jobs(
 ):
     if current_user.role == "customer":
         jobs = db.query(PrintJob).filter(PrintJob.user_id == current_user.id).order_by(PrintJob.created_at.desc()).all()
+    elif current_user.role == "shop":
+        jobs = db.query(PrintJob).filter(PrintJob.shop_id == current_user.id).order_by(PrintJob.created_at.desc()).all()
     else:
-        jobs = db.query(PrintJob).order_by(PrintJob.created_at.desc()).all()
+        jobs = []
 
     return [to_job_response(job) for job in jobs]
 
@@ -226,7 +228,13 @@ def get_job(
 ):
     validate_uuid_format(job_id)
     job = db.query(PrintJob).filter(PrintJob.id == job_id).first()
-    if not job or (current_user.role == "customer" and job.user_id != current_user.id):
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+
+    # Strict IDOR check: Customer must own job, Shop must be the assigned target
+    if current_user.role == "customer" and job.user_id != current_user.id:
+        raise HTTPException(status_code=404, detail="Job not found")
+    elif current_user.role == "shop" and job.shop_id != current_user.id:
         raise HTTPException(status_code=404, detail="Job not found")
 
     return to_job_response(job)
@@ -242,8 +250,10 @@ def delete_job(
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
 
-    # Enforce strict IDOR ownership check
+    # Strict IDOR check: Customer must own job, Shop must be the assigned target
     if current_user.role == "customer" and job.user_id != current_user.id:
+        raise HTTPException(status_code=404, detail="Job not found")
+    elif current_user.role == "shop" and job.shop_id != current_user.id:
         raise HTTPException(status_code=404, detail="Job not found")
 
     if job.status == "DESTROYED":

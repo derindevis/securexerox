@@ -120,6 +120,10 @@ def verify_print_id(
     if not job:
         raise HTTPException(status_code=404, detail="Print ID not found")
 
+    # Enforce IDOR protection: only the designated shop may look up this PIN
+    if job.shop_id and job.shop_id != current_user.id:
+        raise HTTPException(status_code=403, detail="This Print ID is addressed to a different shop counter")
+
     if job.status == "EXPIRED" or (job.expires_at and datetime.utcnow() > job.expires_at):
         job.status = "EXPIRED"
         db.commit()
@@ -147,6 +151,10 @@ def start_session(
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
 
+    # Enforce IDOR protection
+    if job.shop_id and job.shop_id != current_user.id:
+        raise HTTPException(status_code=403, detail="This Print ID is addressed to a different shop counter")
+
     if job.expires_at and datetime.utcnow() >= job.expires_at:
         job.status = "EXPIRED"
         db.commit()
@@ -160,9 +168,6 @@ def start_session(
         job_id=job.id,
         shop_user_id=current_user.id,
         started_at=datetime.utcnow(),
-        violations=0,
-        is_locked=False,
-        security_events=[],
     )
     db.add(session)
     db.commit()
@@ -174,9 +179,6 @@ def start_session(
         shopUserId=session.shop_user_id,
         startedAt=session.started_at,
         endedAt=session.ended_at,
-        violations=session.violations,
-        isLocked=session.is_locked,
-        securityEvents=session.security_events or [],
     )
 
 from app.logger import log_audit_event
@@ -195,12 +197,12 @@ def execute_print(
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
 
-    if job.status in ["DESTROYED", "EXPIRED", "COMPLETED", "ACCESS_REVOKED"]:
-        raise HTTPException(status_code=400, detail=f"Job cannot be printed in state: {job.status}")
-
     # Ensure job is locked to this shop
     if job.shop_id and job.shop_id != current_user.id:
         raise HTTPException(status_code=403, detail="This print job is addressed to a different shop counter")
+
+    if job.status in ["DESTROYED", "EXPIRED", "COMPLETED", "ACCESS_REVOKED"]:
+        raise HTTPException(status_code=400, detail=f"Job cannot be printed in state: {job.status}")
 
     session = db.query(PrintSession).filter(
         PrintSession.job_id == job.id,
@@ -234,11 +236,6 @@ def execute_print(
     job.completed_at = datetime.utcnow()
     job.destroyed_at = datetime.utcnow()
     
-    session = db.query(PrintSession).filter(
-        PrintSession.job_id == job.id,
-        PrintSession.shop_user_id == current_user.id,
-        PrintSession.ended_at.is_(None),
-    ).order_by(PrintSession.started_at.desc()).first()
     if session:
         session.ended_at = datetime.utcnow()
 
@@ -266,6 +263,10 @@ def destroy_document(
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
 
+    # Ensure job is locked to this shop
+    if job.shop_id and job.shop_id != current_user.id:
+        raise HTTPException(status_code=403, detail="This print job is addressed to a different shop counter")
+
     session = db.query(PrintSession).filter(
         PrintSession.job_id == job.id,
         PrintSession.shop_user_id == current_user.id,
@@ -287,6 +288,7 @@ def get_queue(
     current_user: User = Depends(require_role("shop")),
 ):
     jobs = db.query(PrintJob).filter(
+        PrintJob.shop_id == current_user.id,
         PrintJob.status.in_(["PRINT_ID_GENERATED", "WAITING", "SECURE_SESSION", "PRINTING"])
     ).order_by(PrintJob.created_at.asc()).all()
 
@@ -298,47 +300,8 @@ def get_history(
     current_user: User = Depends(require_role("shop")),
 ):
     jobs = db.query(PrintJob).filter(
-        PrintJob.status.in_(["COMPLETED", "ACCESS_REVOKED", "DESTROYED", "EXPIRED", "FAILED", "SESSION_LOCKED"])
+        PrintJob.shop_id == current_user.id,
+        PrintJob.status.in_(["COMPLETED", "ACCESS_REVOKED", "DESTROYED", "EXPIRED", "FAILED"])
     ).order_by(PrintJob.created_at.desc()).all()
 
     return [to_job_response(job) for job in jobs]
-
-@router.get("/stream/{job_id}")
-def stream_document(
-    job_id: str,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
-    validate_uuid_format(job_id)
-    job = db.query(PrintJob).filter(PrintJob.id == job_id).first()
-    if not job:
-        raise HTTPException(status_code=404, detail="Job not found")
-
-    # IDOR Check: Either document customer owner OR shop operator with active session
-    if current_user.role == "customer":
-        if job.user_id != current_user.id:
-            raise HTTPException(status_code=404, detail="Job not found")
-    elif current_user.role == "shop":
-        if job.status not in ["SECURE_SESSION", "PRINTING", "COMPLETED"]:
-            raise HTTPException(status_code=403, detail="Document access restricted to active secure print sessions")
-        get_shop_session(db, job, current_user.id)
-    else:
-        raise HTTPException(status_code=403, detail="Access denied")
-
-    if not job.file_path:
-        raise HTTPException(status_code=404, detail="Document file has already been purged")
-
-    try:
-        file_bytes = read_decrypted_file(job.file_path)
-    except Exception:
-        raise HTTPException(status_code=500, detail="Failed to decrypt document stream")
-
-    media_type = "application/pdf" if job.file_type == "pdf" else f"image/{job.file_type}"
-    return Response(
-        content=file_bytes,
-        media_type=media_type,
-        headers={
-            "Content-Disposition": f"inline; filename={job.file_name}",
-            "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
-        }
-    )
