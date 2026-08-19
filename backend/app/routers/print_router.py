@@ -121,7 +121,11 @@ def verify_print_id(
         raise HTTPException(status_code=404, detail="Print ID not found")
 
     # Enforce IDOR protection: only the designated shop may look up this PIN
-    if job.shop_id and job.shop_id != current_user.id:
+    # If universal job (shop_id is None), dynamically claim it for this shop
+    if job.shop_id is None:
+        job.shop_id = current_user.id
+        db.commit()
+    elif job.shop_id != current_user.id:
         raise HTTPException(status_code=403, detail="This Print ID is addressed to a different shop counter")
 
     if job.status == "EXPIRED" or (job.expires_at and datetime.utcnow() > job.expires_at):
@@ -152,7 +156,10 @@ def start_session(
         raise HTTPException(status_code=404, detail="Job not found")
 
     # Enforce IDOR protection
-    if job.shop_id and job.shop_id != current_user.id:
+    if job.shop_id is None:
+        job.shop_id = current_user.id
+        db.commit()
+    elif job.shop_id != current_user.id:
         raise HTTPException(status_code=403, detail="This Print ID is addressed to a different shop counter")
 
     if job.expires_at and datetime.utcnow() >= job.expires_at:

@@ -13,7 +13,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models import User, PrintJob, PrintDocument, ShopPrinter
 from app.schemas import PrintJobResponse, PrintDocumentResponse
-from app.dependencies import get_current_user, require_role
+from app.dependencies import get_current_user, require_role, get_optional_current_user_or_guest
 from app.config import settings
 from app.storage import save_uploaded_file, delete_job_file
 from app.rate_limiter import check_upload_rate_limit
@@ -82,7 +82,7 @@ async def create_job(
     pageRange: str = Form("All"),
     shopPublicId: Optional[str] = Form(None),
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_role("customer")),
+    current_user: User = Depends(get_optional_current_user_or_guest),
 ):
     check_upload_rate_limit(request, current_user.id)
     
@@ -104,34 +104,38 @@ async def create_job(
         except Exception:
             parsed_configs = []
 
-    # Validate destination shop (MANDATORY)
-    if not shopPublicId or not shopPublicId.strip():
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="A verified destination print shop is required. Please scan the shop QR or select a shop counter."
-        )
+    # Optional destination shop resolution (Counter Standee or Universal)
+    target_shop = None
+    target_shop_id = None
+    is_color_capable = True
 
-    clean_shop_id = shopPublicId.strip().upper()
-    target_shop = db.query(User).filter(
-        (User.shop_public_id == clean_shop_id) | (User.id == shopPublicId),
-        User.role == "shop"
-    ).first()
+    if shopPublicId and shopPublicId.strip():
+        clean_shop_id = shopPublicId.strip().upper()
+        target_shop = db.query(User).filter(
+            (User.shop_public_id == clean_shop_id) | (User.id == shopPublicId),
+            User.role == "shop"
+        ).first()
 
-    if not target_shop and clean_shop_id.startswith("SX-SHOP-"):
-        prefix_sub = clean_shop_id.replace("SX-SHOP-", "").lower()
-        if prefix_sub:
-            target_shop = db.query(User).filter(
-                User.id.startswith(prefix_sub),
-                User.role == "shop"
-            ).first()
+        if not target_shop and clean_shop_id.startswith("SX-SHOP-"):
+            prefix_sub = clean_shop_id.replace("SX-SHOP-", "").lower()
+            if prefix_sub:
+                target_shop = db.query(User).filter(
+                    User.id.startswith(prefix_sub),
+                    User.role == "shop"
+                ).first()
 
-    if not target_shop:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=f"Print shop '{shopPublicId}' is not registered or active."
-        )
+        if not target_shop:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"Print shop '{shopPublicId}' is not registered or active."
+            )
 
-    target_shop_id = target_shop.id
+        target_shop_id = target_shop.id
+
+        # Check shop hardware color capability
+        shop_printers = db.query(ShopPrinter).filter(ShopPrinter.shop_user_id == target_shop.id).all()
+        if shop_printers:
+            is_color_capable = any(p.printer_color_capable for p in shop_printers)
 
     # Generate unique 6-character Print ID
     print_id = generate_print_id()
@@ -150,10 +154,6 @@ async def create_job(
     )
     db.add(job)
     db.flush()
-
-    # Check shop hardware color capability
-    shop_printers = db.query(ShopPrinter).filter(ShopPrinter.shop_user_id == target_shop.id).all()
-    is_color_capable = any(p.printer_color_capable for p in shop_printers) if shop_printers else True
 
     # 2. Process, strictly validate magic bytes, and encrypt each document
     ALLOWED_EXTENSIONS = {".pdf", ".jpg", ".jpeg", ".png", ".docx", ".doc"}
@@ -261,17 +261,17 @@ def get_jobs(
 def get_job(
     job_id: str,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_optional_current_user_or_guest),
 ):
     validate_uuid_format(job_id)
     job = db.query(PrintJob).filter(PrintJob.id == job_id).first()
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
 
-    # Strict IDOR check: Customer must own job, Shop must be the assigned target
+    # Strict IDOR check: Customer must own job, Shop must be the assigned target (or universal unassigned)
     if current_user.role == "customer" and job.user_id != current_user.id:
         raise HTTPException(status_code=404, detail="Job not found")
-    elif current_user.role == "shop" and job.shop_id != current_user.id:
+    elif current_user.role == "shop" and job.shop_id and job.shop_id != current_user.id:
         raise HTTPException(status_code=404, detail="Job not found")
 
     return to_job_response(job)
