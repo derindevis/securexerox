@@ -86,7 +86,7 @@ export default function AppRoutes() {
       />
       <Route
         path="/shop/secure-print/:jobId"
-        element={<ProtectedRoute role="shop"><SecurePrint /></ProtectedRoute>}
+        element={<ProtectedRoute role="shop"><ConfirmPrint /></ProtectedRoute>}
       />
       <Route
         path="/shop/queue"

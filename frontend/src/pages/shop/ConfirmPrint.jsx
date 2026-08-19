@@ -35,11 +35,16 @@ export default function ConfirmPrint() {
   const [isCompleted, setIsCompleted] = useState(false);
   const [errorMsg, setErrorMsg] = useState(null);
 
-  // 10-Minute countdown
-  const countdown = useCountdown(300, true, () => {
+  // 5-Minute countdown
+  const countdown = useCountdown(300, true, async () => {
+    try {
+      await api.destroyDocument(jobId);
+    } catch (e) {
+      console.error('Failed to destroy document on expiry', e);
+    }
     updateJobStatus(jobId, JOB_STATUS.EXPIRED);
     endSecureSession();
-    addToast('Print session has expired', 'warning');
+    addToast('Print session expired and document securely destroyed', 'warning');
     navigate('/shop/dashboard');
   });
 
