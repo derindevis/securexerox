@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session
 
 from app.database import get_db
+from app.config import settings
 from app.models import User, generate_shop_public_id
 from app.schemas import (
     UserRegister,
