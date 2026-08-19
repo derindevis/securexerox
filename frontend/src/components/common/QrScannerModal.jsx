@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Html5Qrcode } from 'html5-qrcode';
-import { X, Camera, RefreshCw, AlertCircle, Sparkles, CheckCircle2, Search } from 'lucide-react';
+import { X, Camera, RefreshCw, AlertCircle, CheckCircle2, Search } from 'lucide-react';
 import Modal from './Modal';
 
 export default function QrScannerModal({ isOpen, onClose, onScanSuccess, onManualEntryClick }) {
@@ -37,7 +37,7 @@ export default function QrScannerModal({ isOpen, onClose, onScanSuccess, onManua
     return text.toUpperCase();
   };
 
-  // Initialize camera list and scanner when modal opens
+  // Initialize scanner when modal opens
   useEffect(() => {
     let html5QrCode = null;
     let isMounted = true;
@@ -48,61 +48,62 @@ export default function QrScannerModal({ isOpen, onClose, onScanSuccess, onManua
       setScannedResult(null);
 
       try {
-        const devices = await Html5Qrcode.getCameras();
-        if (!isMounted) return;
-
-        if (!devices || devices.length === 0) {
-          setCameraError('No video cameras found on this device.');
-          return;
-        }
-
-        setCameras(devices);
-        // Prefer back / environment camera on mobile devices
-        const backCamera = devices.find(d => 
-          d.label.toLowerCase().includes('back') || 
-          d.label.toLowerCase().includes('environment') ||
-          d.label.toLowerCase().includes('rear')
-        );
-        const cameraIdToUse = backCamera ? backCamera.id : devices[0].id;
-        setSelectedCameraId(cameraIdToUse);
-
         html5QrCode = new Html5Qrcode(qrRegionId);
         scannerRef.current = html5QrCode;
 
-        await html5QrCode.start(
-          cameraIdToUse,
-          {
-            fps: 10,
-            qrbox: { width: 250, height: 250 },
-            aspectRatio: 1.0,
-          },
-          (decodedText) => {
-            const parsedShopId = extractShopId(decodedText);
-            if (parsedShopId) {
-              setScannedResult(parsedShopId);
-              // Stop camera and trigger callback
-              html5QrCode.stop().then(() => {
-                if (isMounted) {
-                  setIsScanning(false);
-                  setTimeout(() => {
-                    onScanSuccess(parsedShopId);
-                    onClose();
-                  }, 400);
-                }
-              }).catch(() => {
-                if (isMounted) {
+        const qrConfig = {
+          fps: 10,
+          qrbox: { width: 250, height: 250 },
+          aspectRatio: 1.0,
+        };
+
+        const onScan = (decodedText) => {
+          const parsedShopId = extractShopId(decodedText);
+          if (parsedShopId && isMounted) {
+            setScannedResult(parsedShopId);
+            html5QrCode.stop().then(() => {
+              if (isMounted) {
+                setIsScanning(false);
+                setTimeout(() => {
                   onScanSuccess(parsedShopId);
                   onClose();
-                }
-              });
-            }
-          },
-          () => {
-            // Ignore frame-by-frame scan misses
+                }, 400);
+              }
+            }).catch(() => {
+              if (isMounted) {
+                onScanSuccess(parsedShopId);
+                onClose();
+              }
+            });
           }
-        );
+        };
 
-        if (isMounted) setIsScanning(true);
+        // Try direct environment (rear) camera first for instant mobile access
+        try {
+          await html5QrCode.start({ facingMode: "environment" }, qrConfig, onScan, () => {});
+          if (isMounted) setIsScanning(true);
+        } catch (facingErr) {
+          // Fallback to explicit camera list / default camera
+          const devices = await Html5Qrcode.getCameras();
+          if (!isMounted) return;
+
+          if (!devices || devices.length === 0) {
+            setCameraError('No video cameras detected on this device.');
+            return;
+          }
+
+          setCameras(devices);
+          const backCamera = devices.find(d => 
+            d.label.toLowerCase().includes('back') || 
+            d.label.toLowerCase().includes('environment') ||
+            d.label.toLowerCase().includes('rear')
+          );
+          const cameraIdToUse = backCamera ? backCamera.id : devices[0].id;
+          setSelectedCameraId(cameraIdToUse);
+
+          await html5QrCode.start(cameraIdToUse, qrConfig, onScan, () => {});
+          if (isMounted) setIsScanning(true);
+        }
       } catch (err) {
         console.error('Camera QR scanner init error:', err);
         if (isMounted) {
@@ -110,7 +111,7 @@ export default function QrScannerModal({ isOpen, onClose, onScanSuccess, onManua
           setCameraError(
             isPerm
               ? 'Camera permission was denied or dismissed. Please allow camera access in your browser or enter the Shop ID manually.'
-              : 'Unable to start camera viewfinder on this device.'
+              : 'Unable to open camera viewfinder. Please verify device permissions or enter the Shop ID manually.'
           );
         }
       }
@@ -130,13 +131,20 @@ export default function QrScannerModal({ isOpen, onClose, onScanSuccess, onManua
     }
   }, [isOpen, onScanSuccess, onClose]);
 
-  // Switch camera
+  // Switch camera if multiple cameras are available
   const handleSwitchCamera = async () => {
-    if (!scannerRef.current || cameras.length <= 1) return;
+    if (!scannerRef.current) return;
     try {
+      let devList = cameras;
+      if (devList.length === 0) {
+        devList = await Html5Qrcode.getCameras();
+        setCameras(devList);
+      }
+      if (devList.length <= 1) return;
+
       await scannerRef.current.stop();
-      const nextIdx = (cameras.findIndex(c => c.id === selectedCameraId) + 1) % cameras.length;
-      const nextCam = cameras[nextIdx];
+      const nextIdx = (devList.findIndex(c => c.id === selectedCameraId) + 1) % devList.length;
+      const nextCam = devList[nextIdx];
       setSelectedCameraId(nextCam.id);
 
       await scannerRef.current.start(
@@ -199,7 +207,7 @@ export default function QrScannerModal({ isOpen, onClose, onScanSuccess, onManua
               <div className="w-12 h-12 rounded-full bg-[var(--danger-soft)] text-[var(--danger)] flex items-center justify-center mb-3">
                 <AlertCircle size={24} />
               </div>
-              <p className="text-sm font-semibold text-[var(--ink)] mb-1">Camera Access Required</p>
+              <p className="text-sm font-semibold text-[var(--ink)] mb-1">Camera Access Notice</p>
               <p className="text-xs text-[var(--ink-muted)] leading-relaxed mb-5">{cameraError}</p>
               
               <button

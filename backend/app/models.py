@@ -52,6 +52,17 @@ class PrintJob(Base):
     
     status = Column(String, nullable=False, default="PRINT_ID_GENERATED")
 
+    # Legacy backward-compatible columns (mirrored from primary document)
+    file_name = Column(String, nullable=True)
+    file_path = Column(String, nullable=True)
+    file_type = Column(String, nullable=True)
+    file_size = Column(Integer, nullable=True)
+    copies = Column(Integer, default=1, nullable=True)
+    paper_size = Column(String, default="A4", nullable=True)
+    color_mode = Column(String, default="Black & White", nullable=True)
+    orientation = Column(String, default="Portrait", nullable=True)
+    page_range = Column(String, default="All", nullable=True)
+
     created_at = Column(DateTime, default=datetime.utcnow)
     expires_at = Column(DateTime, nullable=True)
     completed_at = Column(DateTime, nullable=True)

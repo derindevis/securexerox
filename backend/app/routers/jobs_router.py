@@ -144,6 +144,13 @@ async def create_job(
 
     expires_at = datetime.utcnow() + timedelta(minutes=settings.PRINT_ID_EXPIRY_MINUTES)
 
+    # Extract primary document metadata for legacy backward-compatible columns
+    first_upload = upload_files[0]
+    first_name = sanitize_filename(first_upload.filename or "document.pdf")
+    first_cfg = parsed_configs[0] if parsed_configs else {}
+    _, first_ext = os.path.splitext(first_name.lower())
+    first_type = "pdf" if "pdf" in first_ext else ("png" if "png" in first_ext else "jpg")
+
     # 1. Create parent PrintJob
     job = PrintJob(
         print_id=print_id,
@@ -151,6 +158,14 @@ async def create_job(
         shop_id=target_shop_id,
         status="PRINT_ID_GENERATED",
         expires_at=expires_at,
+        file_name=first_name,
+        file_type=first_type,
+        file_size=0,
+        copies=int(first_cfg.get("copies", copies)),
+        paper_size=str(first_cfg.get("paperSize", paperSize)),
+        color_mode=str(first_cfg.get("colorMode", colorMode)),
+        orientation=str(first_cfg.get("orientation", orientation)),
+        page_range=str(first_cfg.get("pageRange", pageRange)),
     )
     db.add(job)
     db.flush()
@@ -222,6 +237,11 @@ async def create_job(
 
         # 5. Encrypted File Storage
         _, file_path = save_uploaded_file(content, raw_name)
+
+        if idx == 0:
+            job.file_path = file_path
+            job.file_size = len(content)
+            job.file_type = normalized_type
 
         print_doc = PrintDocument(
             print_job_id=job.id,
