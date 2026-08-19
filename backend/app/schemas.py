@@ -2,7 +2,7 @@ import html
 import re
 from typing import Optional, List, Any
 from datetime import datetime
-from pydantic import BaseModel, EmailStr, field_validator
+from pydantic import BaseModel, EmailStr, field_validator, Field, AliasChoices, ConfigDict
 
 def sanitize_text(v: str) -> str:
     if not isinstance(v, str):
@@ -39,17 +39,16 @@ class UserLogin(BaseModel):
     password: str
 
 class UserResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True)
+
     id: str
     email: str
     name: str
     role: str
     is_verified: bool = False
-    shopPublicId: Optional[str] = None
-    shopQrPayload: Optional[str] = None
+    shopPublicId: Optional[str] = Field(default=None, validation_alias=AliasChoices("shop_public_id", "shopPublicId"))
+    shopQrPayload: Optional[str] = Field(default=None, validation_alias=AliasChoices("shop_qr_payload", "shopQrPayload"))
     created_at: datetime
-
-    class Config:
-        from_attributes = True
 
 class TokenResponse(BaseModel):
     access_token: str

@@ -8,8 +8,8 @@ export default function CounterStandeeModal({ isOpen, onClose, shopUser }) {
 
   if (!shopUser) return null;
 
-  const shopPublicId = shopUser.shopPublicId || `SX-SHOP-${shopUser.id?.slice(0, 4).toUpperCase()}`;
-  const qrUrl = shopUser.shopQrPayload || `${window.location.origin}/customer/upload?shop=${shopPublicId}`;
+  const shopPublicId = shopUser.shopPublicId || shopUser.shop_public_id || `SX-SHOP-${shopUser.id?.slice(0, 4).toUpperCase()}`;
+  const qrUrl = shopUser.shopQrPayload || shopUser.shop_qr_payload || `${window.location.origin}/customer/upload?shop=${shopPublicId}`;
 
   const handlePrint = () => {
     window.print();

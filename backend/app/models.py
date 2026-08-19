@@ -31,6 +31,14 @@ class User(Base):
     
     created_at = Column(DateTime, default=datetime.utcnow)
 
+    @property
+    def shopPublicId(self):
+        return self.shop_public_id
+
+    @property
+    def shopQrPayload(self):
+        return self.shop_qr_payload
+
     jobs = relationship("PrintJob", foreign_keys="[PrintJob.user_id]", back_populates="customer")
     printers = relationship("ShopPrinter", back_populates="shop_user", cascade="all, delete-orphan")
 

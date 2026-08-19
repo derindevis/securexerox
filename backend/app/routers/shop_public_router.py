@@ -13,11 +13,19 @@ def get_shop_public_info(public_id: str, request: Request, db: Session = Depends
     check_scrape_rate_limit(request)
     clean_id = public_id.strip().upper()
     
-    # Search by shop_public_id or internal ID
+    # Search by shop_public_id, internal ID, or prefix fallback
     shop = db.query(User).filter(
         (User.shop_public_id == clean_id) | (User.id == public_id),
         User.role == "shop"
     ).first()
+
+    if not shop and clean_id.startswith("SX-SHOP-"):
+        prefix_sub = clean_id.replace("SX-SHOP-", "").lower()
+        if prefix_sub:
+            shop = db.query(User).filter(
+                User.id.startswith(prefix_sub),
+                User.role == "shop"
+            ).first()
 
     if not shop:
         raise HTTPException(

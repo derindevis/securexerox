@@ -117,6 +117,14 @@ async def create_job(
         User.role == "shop"
     ).first()
 
+    if not target_shop and clean_shop_id.startswith("SX-SHOP-"):
+        prefix_sub = clean_shop_id.replace("SX-SHOP-", "").lower()
+        if prefix_sub:
+            target_shop = db.query(User).filter(
+                User.id.startswith(prefix_sub),
+                User.role == "shop"
+            ).first()
+
     if not target_shop:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
@@ -142,6 +150,10 @@ async def create_job(
     )
     db.add(job)
     db.flush()
+
+    # Check shop hardware color capability
+    shop_printers = db.query(ShopPrinter).filter(ShopPrinter.shop_user_id == target_shop.id).all()
+    is_color_capable = any(p.printer_color_capable for p in shop_printers) if shop_printers else True
 
     # 2. Process, strictly validate magic bytes, and encrypt each document
     ALLOWED_EXTENSIONS = {".pdf", ".jpg", ".jpeg", ".png", ".docx", ".doc"}
@@ -174,6 +186,11 @@ async def create_job(
             raise HTTPException(status_code=422, detail="Unsupported paper size")
         if doc_color not in {"Color", "Black & White"}:
             raise HTTPException(status_code=422, detail="Unsupported color mode")
+        if doc_color == "Color" and not is_color_capable:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Target shop '{target_shop.name}' does not support color printing."
+            )
         if doc_orientation not in {"Portrait", "Landscape"}:
             raise HTTPException(status_code=422, detail="Unsupported orientation")
 

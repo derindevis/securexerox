@@ -34,13 +34,25 @@ const ACTIONS = {
   SET_LOADING: 'SET_LOADING',
 };
 
+// ---- User Normalizer ----
+function normalizeUser(u) {
+  if (!u) return null;
+  const shopId = u.shopPublicId || u.shop_public_id || (u.id && u.role === 'shop' ? `SX-SHOP-${u.id.slice(0, 4).toUpperCase()}` : null);
+  return {
+    ...u,
+    shopPublicId: shopId,
+    shop_public_id: shopId,
+    shopQrPayload: u.shopQrPayload || u.shop_qr_payload || (shopId ? `https://securexerox-fhqr.vercel.app/customer/upload?shop=${shopId}` : null),
+  };
+}
+
 // ---- Reducer ----
 function appReducer(state, action) {
   switch (action.type) {
     case ACTIONS.LOGIN:
       return {
         ...state,
-        currentUser: action.payload,
+        currentUser: normalizeUser(action.payload),
         isAuthenticated: true,
       };
 

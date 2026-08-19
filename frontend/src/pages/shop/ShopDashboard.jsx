@@ -29,8 +29,8 @@ export default function ShopDashboard() {
     printerColorCapable: false,
   });
 
-  const shopPublicId = currentUser?.shopPublicId || (currentUser?.id ? `SX-SHOP-${currentUser.id.slice(0, 4).toUpperCase()}` : 'SX-SHOP-DEFAULT');
-  const shopQrUrl = currentUser?.shopQrPayload || `${window.location.origin}/customer/upload?shop=${shopPublicId}`;
+  const shopPublicId = currentUser?.shopPublicId || currentUser?.shop_public_id || (currentUser?.id ? `SX-SHOP-${currentUser.id.slice(0, 4).toUpperCase()}` : 'SX-SHOP-DEFAULT');
+  const shopQrUrl = currentUser?.shopQrPayload || currentUser?.shop_qr_payload || `${window.location.origin}/customer/upload?shop=${shopPublicId}`;
 
   const loadPrinters = async () => {
     try {
