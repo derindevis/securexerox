@@ -1,14 +1,16 @@
 from typing import List
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models import User, ShopPrinter
 from app.schemas import ShopPublicInfoResponse
+from app.rate_limiter import check_scrape_rate_limit
 
 router = APIRouter(prefix="/api/shops/public", tags=["Public Shop Discovery"])
 
 @router.get("/{public_id}", response_model=ShopPublicInfoResponse)
-def get_shop_public_info(public_id: str, db: Session = Depends(get_db)):
+def get_shop_public_info(public_id: str, request: Request, db: Session = Depends(get_db)):
+    check_scrape_rate_limit(request)
     clean_id = public_id.strip().upper()
     
     # Search by shop_public_id or internal ID
@@ -27,10 +29,8 @@ def get_shop_public_info(public_id: str, db: Session = Depends(get_db)):
     printers = db.query(ShopPrinter).filter(ShopPrinter.shop_user_id == shop.id).all()
     
     is_color = any(p.printer_color_capable for p in printers)
-    # Online if any printer is online or if shop has printers registered
     is_online = any(p.printer_status == "online" for p in printers) or (len(printers) > 0)
     
-    # Default fallback if virtual mode
     if len(printers) == 0:
         is_online = True
         is_color = True
@@ -47,7 +47,8 @@ def get_shop_public_info(public_id: str, db: Session = Depends(get_db)):
     )
 
 @router.get("", response_model=List[ShopPublicInfoResponse])
-def list_public_shops(db: Session = Depends(get_db)):
+def list_public_shops(request: Request, db: Session = Depends(get_db)):
+    check_scrape_rate_limit(request)
     shops = db.query(User).filter(User.role == "shop").all()
     results = []
     for shop in shops:
