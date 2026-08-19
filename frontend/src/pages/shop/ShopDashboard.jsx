@@ -97,6 +97,15 @@ export default function ShopDashboard() {
     }
   };
 
+  const handleAcceptPrint = async (jobId) => {
+    try {
+      await api.startSession(jobId);
+      window.location.href = `/shop/secure-print/${jobId}`;
+    } catch (err) {
+      addToast(err.message || 'Failed to accept print job', 'error');
+    }
+  };
+
   return (
     <PageTransition>
       <main className="sx-page">
@@ -173,7 +182,7 @@ export default function ShopDashboard() {
             <div className="flex items-end justify-between">
               <div>
                 <h2 className="text-xl font-medium text-[var(--ink)]" style={{ fontFamily: 'var(--serif)' }}>
-                  Next in line
+                  Incoming Direct Requests
                 </h2>
               </div>
               <Link className="text-sm font-medium text-[var(--ink-secondary)] hover:text-[var(--ink)]" to="/shop/queue">Open queue</Link>
@@ -181,9 +190,9 @@ export default function ShopDashboard() {
 
             <div className="sx-list">
               {queue.slice(0, 5).map((job, index) => (
-                <div className="sx-row" key={job.id}>
-                  <div className="flex gap-4">
-                    <span className="text-[var(--emerald)] font-mono font-bold">{String(index + 1).padStart(2, '0')}</span>
+                <div className="sx-row flex flex-col md:flex-row md:items-center justify-between gap-4" key={job.id}>
+                  <div className="flex gap-4 items-center">
+                    <span className="text-[var(--emerald)] font-mono font-bold shrink-0">{String(index + 1).padStart(2, '0')}</span>
                     <div>
                       <strong className="text-[var(--ink)] font-medium">
                         {job.documents && job.documents.length > 1
@@ -193,11 +202,21 @@ export default function ShopDashboard() {
                       <p className="mt-1 text-xs text-[var(--ink-muted)]">{job.printId} · {formatRelativeTime(job.createdAt || job.created_at)}</p>
                     </div>
                   </div>
-                  <span className="sx-status">{job.status.replaceAll('_', ' ')}</span>
+                  <div className="flex items-center gap-3 w-full md:w-auto mt-2 md:mt-0">
+                    <span className="sx-status text-xs shrink-0">{job.status.replaceAll('_', ' ')}</span>
+                    {job.status === 'PRINT_ID_GENERATED' && (
+                      <button 
+                        onClick={() => handleAcceptPrint(job.id)}
+                        className="sx-button py-1.5 px-3 text-xs justify-center shrink-0 w-full md:w-auto"
+                      >
+                        Accept & Print
+                      </button>
+                    )}
+                  </div>
                 </div>
               ))}
               {queue.length === 0 && (
-                <div className="sx-panel text-[var(--ink-secondary)] mt-4">The queue is clear.</div>
+                <div className="sx-panel text-[var(--ink-secondary)] mt-4">The incoming queue is clear.</div>
               )}
             </div>
           </section>

@@ -180,7 +180,12 @@ export default function UploadDocument() {
       };
 
       const job = await createJob(documents, globalSettings);
-      nav(`/customer/print-id/${job.id}`);
+      
+      if (globalSettings.shopPublicId) {
+        nav(`/customer/track/${job.id}`);
+      } else {
+        nav(`/customer/print-id/${job.id}`);
+      }
     } catch (err) {
       console.error('Upload error:', err);
       addToast(err.message || 'Failed to encrypt and upload documents', 'error');

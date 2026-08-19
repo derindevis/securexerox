@@ -10,6 +10,7 @@ import OAuthCallback from '../pages/OAuthCallback';
 import CustomerDashboard from '../pages/customer/CustomerDashboard';
 import UploadDocument from '../pages/customer/UploadDocument';
 import PrintIDPage from '../pages/customer/PrintIDPage';
+import CustomerTrackJob from '../pages/customer/CustomerTrackJob';
 import CustomerJobs from '../pages/customer/CustomerJobs';
 import JobDetails from '../pages/customer/JobDetails';
 
@@ -51,6 +52,10 @@ export default function AppRoutes() {
       <Route
         path="/customer/print-id/:jobId"
         element={<PrintIDPage />}
+      />
+      <Route
+        path="/customer/track/:jobId"
+        element={<CustomerTrackJob />}
       />
       <Route
         path="/customer/dashboard"

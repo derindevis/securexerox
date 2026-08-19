@@ -10,6 +10,15 @@ export default function PrintQueuePage() {
     (j) => [JOB_STATUS.WAITING, JOB_STATUS.PRINT_ID_GENERATED, JOB_STATUS.SECURE_SESSION, JOB_STATUS.PRINTING].includes(j.status)
   );
 
+  const handleAcceptPrint = async (jobId) => {
+    try {
+      await api.startSession(jobId);
+      window.location.href = `/shop/secure-print/${jobId}`;
+    } catch (err) {
+      alert(err.message || 'Failed to accept print job');
+    }
+  };
+
   return (
     <PageTransition>
       <main className="sx-page">
@@ -33,23 +42,35 @@ export default function PrintQueuePage() {
                 return (
                   <div
                     key={job.id}
-                    className={`sx-card !p-4 flex items-center gap-4 ${isPrinting ? '!border-[var(--blue)]/20' : ''}`}
+                    className={`sx-card !p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 ${isPrinting ? '!border-[var(--blue)]/20' : ''}`}
                   >
-                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 font-bold text-lg font-mono ${
-                      isPrinting ? 'bg-[var(--blue-soft)] text-[var(--blue)]' : 'bg-[var(--sage)] text-[var(--ink-muted)]'
-                    }`}>
-                      #{index + 1}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-[var(--ink)] truncate">{job.fileName}</p>
-                      <div className="flex items-center gap-2 mt-0.5">
-                        <span className="text-xs text-[var(--ink-muted)] font-mono">{job.printId}</span>
-                        <span className="text-xs text-[var(--ink-muted)]">{job.copies} {job.copies === 1 ? 'copy' : 'copies'}</span>
+                    <div className="flex gap-4 items-center">
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 font-bold text-lg font-mono ${
+                        isPrinting ? 'bg-[var(--blue-soft)] text-[var(--blue)]' : 'bg-[var(--sage)] text-[var(--ink-muted)]'
+                      }`}>
+                        #{index + 1}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-[var(--ink)] truncate">{job.fileName}</p>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <span className="text-xs text-[var(--ink-muted)] font-mono">{job.printId}</span>
+                          <span className="text-xs text-[var(--ink-muted)]">{job.copies} {job.copies === 1 ? 'copy' : 'copies'}</span>
+                        </div>
                       </div>
                     </div>
-                    <span className={`sx-badge ${isPrinting ? 'sx-badge--success' : ''}`}>
-                      {isPrinting ? 'PRINTING' : 'WAITING'}
-                    </span>
+                    <div className="flex items-center gap-3 mt-2 md:mt-0">
+                      <span className={`sx-badge shrink-0 ${isPrinting ? 'sx-badge--success' : ''}`}>
+                        {isPrinting ? 'PRINTING' : job.status.replaceAll('_', ' ')}
+                      </span>
+                      {job.status === 'PRINT_ID_GENERATED' && (
+                        <button 
+                          onClick={() => handleAcceptPrint(job.id)}
+                          className="sx-button py-1.5 px-3 text-xs justify-center shrink-0"
+                        >
+                          Accept & Print
+                        </button>
+                      )}
+                    </div>
                   </div>
                 );
               })}
