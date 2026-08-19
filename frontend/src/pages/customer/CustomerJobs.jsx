@@ -88,12 +88,18 @@ export default function CustomerJobs() {
                         </div>
                         <div>
                           <p className="text-sm font-medium text-[var(--ink)] group-hover:text-[var(--emerald)] transition-colors">
-                            {job.fileName}
+                            {job.documents && job.documents.length > 1
+                              ? `${job.documents[0].fileName} + ${job.documents.length - 1} more`
+                              : job.documents?.[0]?.fileName || job.fileName || 'Batch Document'}
                           </p>
                           <div className="flex items-center gap-3 mt-0.5">
                             <span className="text-xs text-[var(--ink-muted)] font-mono">{job.printId}</span>
-                            <span className="text-xs text-[var(--ink-muted)]">{formatRelativeTime(job.createdAt)}</span>
-                            <span className="text-xs text-[var(--ink-muted)]">{job.copies} {job.copies === 1 ? 'copy' : 'copies'}</span>
+                            <span className="text-xs text-[var(--ink-muted)]">{formatRelativeTime(job.createdAt || job.created_at)}</span>
+                            <span className="text-xs text-[var(--ink-muted)]">
+                              {job.documents
+                                ? `${job.documents.reduce((s, d) => s + (d.copies || 1), 0)} total copies`
+                                : `${job.copies || 1} copies`}
+                            </span>
                           </div>
                         </div>
                       </div>

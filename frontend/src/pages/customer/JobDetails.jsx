@@ -102,23 +102,44 @@ export default function JobDetails() {
                   </div>
                 </div>
               </div>
+
+              {/* Batch Documents Card */}
+              {job.documents && job.documents.length > 0 && (
+                <div className="sx-card mt-6">
+                  <h3 className="text-xs uppercase tracking-widest text-[var(--ink-muted)] mb-3">
+                    Batch Documents ({job.documents.length})
+                  </h3>
+                  <div className="flex flex-col gap-2.5">
+                    {job.documents.map((d, idx) => (
+                      <div key={d.id || idx} className="p-3 rounded-xl bg-[var(--surface-muted)] border border-[var(--line)] flex items-center justify-between text-xs">
+                        <div className="flex items-center gap-2">
+                          <FileText size={14} className="text-[var(--ink-muted)]" />
+                          <span className="font-semibold text-[var(--ink)] truncate max-w-xs">{d.fileName}</span>
+                        </div>
+                        <span className="font-mono text-[11px] text-[var(--ink-muted)]">
+                          {d.copies}x • {d.colorMode} • {d.paperSize}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Details sidebar */}
             <div className="space-y-6">
               <div className="sx-card">
-                <h3 className="text-xs uppercase tracking-widest text-[var(--ink-muted)] mb-3">Print Settings</h3>
+                <h3 className="text-xs uppercase tracking-widest text-[var(--ink-muted)] mb-3">Session Metadata</h3>
                 <div className="space-y-2.5 text-sm">
                   {[
-                    ['Copies', job.copies],
-                    ['Paper', job.paperSize],
-                    ['Color', job.colorMode],
-                    ['Orientation', job.orientation],
-                    ['Pages', job.pageRange],
+                    ['Total Files', job.documents ? job.documents.length : 1],
+                    ['Total Copies', job.documents ? job.documents.reduce((s, d) => s + (d.copies || 1), 0) : job.copies || 1],
+                    ['Created', formatRelativeTime(job.createdAt || job.created_at)],
+                    ['Status', job.status],
                   ].map(([label, value]) => (
                     <div key={label} className="flex justify-between">
                       <span className="text-[var(--ink-muted)]">{label}</span>
-                      <span className="text-[var(--ink)] font-medium">{value}</span>
+                      <span className="font-medium text-[var(--ink)]">{value}</span>
                     </div>
                   ))}
                 </div>

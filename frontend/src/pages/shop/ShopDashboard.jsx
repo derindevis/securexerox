@@ -185,8 +185,12 @@ export default function ShopDashboard() {
                   <div className="flex gap-4">
                     <span className="text-[var(--emerald)] font-mono font-bold">{String(index + 1).padStart(2, '0')}</span>
                     <div>
-                      <strong className="text-[var(--ink)] font-medium">{job.fileName}</strong>
-                      <p className="mt-1 text-xs text-[var(--ink-muted)]">{job.printId} · {formatRelativeTime(job.createdAt)}</p>
+                      <strong className="text-[var(--ink)] font-medium">
+                        {job.documents && job.documents.length > 1
+                          ? `${job.documents[0].fileName} + ${job.documents.length - 1} more (${job.documents.length} files)`
+                          : job.documents?.[0]?.fileName || job.fileName || 'Batch Print Job'}
+                      </strong>
+                      <p className="mt-1 text-xs text-[var(--ink-muted)]">{job.printId} · {formatRelativeTime(job.createdAt || job.created_at)}</p>
                     </div>
                   </div>
                   <span className="sx-status">{job.status.replaceAll('_', ' ')}</span>

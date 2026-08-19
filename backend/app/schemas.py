@@ -138,11 +138,11 @@ class PrintSettings(BaseModel):
             raise ValueError("Invalid page range format")
         return s
 
-class PrintJobCreate(PrintSettings):
+class PrintDocumentCreate(PrintSettings):
     fileName: str
     fileType: str
     fileSize: int
-    shopPublicId: Optional[str] = None
+    printOrder: Optional[int] = 0
 
     @field_validator("fileName")
     @classmethod
@@ -155,13 +155,17 @@ class PrintJobCreate(PrintSettings):
     @field_validator("fileType")
     @classmethod
     def validate_filetype(cls, v: str) -> str:
-        if v.lower() not in {"pdf", "jpg", "jpeg", "png"}:
+        if v.lower() not in {"pdf", "jpg", "jpeg", "png", "docx", "doc"}:
             raise ValueError("Unsupported file type")
         return v.lower()
 
-class PrintJobResponse(BaseModel):
+class PrintJobCreate(BaseModel):
+    documents: List[PrintDocumentCreate]
+    shopPublicId: Optional[str] = None
+
+class PrintDocumentResponse(BaseModel):
     id: str
-    printId: str
+    printJobId: str
     fileName: str
     fileType: str
     fileSize: int
@@ -170,14 +174,22 @@ class PrintJobResponse(BaseModel):
     colorMode: str
     orientation: str
     pageRange: str
+    printOrder: int
+
+    class Config:
+        from_attributes = True
+
+class PrintJobResponse(BaseModel):
+    id: str
+    printId: str
     status: str
-    violations: int
     createdAt: datetime
     expiresAt: Optional[datetime] = None
     completedAt: Optional[datetime] = None
     destroyedAt: Optional[datetime] = None
     customerId: str
     shopId: Optional[str] = None
+    documents: List[PrintDocumentResponse] = []
 
     class Config:
         from_attributes = True

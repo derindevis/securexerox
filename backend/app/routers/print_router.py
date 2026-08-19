@@ -27,27 +27,36 @@ def get_shop_session(db: Session, job: PrintJob, shop_user_id: str) -> PrintSess
         job.status = "EXPIRED"
         db.commit()
         raise HTTPException(status_code=410, detail="The secure print session has expired")
-    return session
+from app.schemas import PrintJobResponse, PrintDocumentResponse, PrintSessionResponse, ViolationRequest
 
 def to_job_response(job: PrintJob) -> PrintJobResponse:
+    docs = []
+    if hasattr(job, "documents") and job.documents:
+        for d in sorted(job.documents, key=lambda x: x.print_order):
+            docs.append(PrintDocumentResponse(
+                id=d.id,
+                printJobId=d.print_job_id,
+                fileName=d.file_name,
+                fileType=d.file_type,
+                fileSize=d.file_size,
+                copies=d.copies,
+                paperSize=d.paper_size,
+                colorMode=d.color_mode,
+                orientation=d.orientation,
+                pageRange=d.page_range,
+                printOrder=d.print_order,
+            ))
     return PrintJobResponse(
         id=job.id,
         printId=job.print_id,
-        fileName=job.file_name,
-        fileType=job.file_type,
-        fileSize=job.file_size,
-        copies=job.copies,
-        paperSize=job.paper_size,
-        colorMode=job.color_mode,
-        orientation=job.orientation,
-        pageRange=job.page_range,
         status=job.status,
-        violations=job.violations,
         createdAt=job.created_at,
         expiresAt=job.expires_at,
         completedAt=job.completed_at,
         destroyedAt=job.destroyed_at,
         customerId=job.user_id,
+        shopId=job.shop_id,
+        documents=docs,
     )
 
 def stream_to_hardware_printer(printer: Optional[ShopPrinter], file_bytes: bytes, job: PrintJob) -> bool:
@@ -238,40 +247,47 @@ def execute_print(
     if job.status not in ["SECURE_SESSION", "WAITING"]:
         raise HTTPException(status_code=409, detail="Document is not in an active secure session")
 
-    # 1. Match registered printer for shop matching color mode
+    # 1. Match registered printer for shop
     printers = db.query(ShopPrinter).filter(ShopPrinter.shop_user_id == current_user.id).all()
-    selected_printer = None
-    if job.color_mode.lower() == "color":
-        selected_printer = next((p for p in printers if p.printer_color_capable), None)
-    if not selected_printer and printers:
-        selected_printer = printers[0]
+    
+    # 2. Spool all documents in batch
+    docs = job.documents or []
+    for doc in docs:
+        selected_printer = None
+        if doc.color_mode.lower() == "color":
+            selected_printer = next((p for p in printers if p.printer_color_capable), None)
+        if not selected_printer and printers:
+            selected_printer = printers[0]
 
-    # 2. Read decrypted document bytes from transient RAM
-    try:
-        file_bytes = read_decrypted_file(job.file_path)
-    except Exception:
-        raise HTTPException(status_code=410, detail="Document bytes are no longer available in transient memory")
+        try:
+            file_bytes = read_decrypted_file(doc.file_path)
+            stream_to_hardware_printer(selected_printer, file_bytes, job)
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Failed to spool document '{doc.file_name}': {str(e)}")
 
-    # 3. Stream directly to hardware printer spooler (Zero browser exposure)
-    stream_to_hardware_printer(selected_printer, file_bytes, job)
-
-    # 4. Immediate Cryptographic Memory Shredding
+    # 3. Immediate Cryptographic Memory Shredding of all files in job
     delete_job_file(job)
 
-    # 5. Mark as DESTROYED & Completed
+    # 4. Mark as DESTROYED & Completed
     job.status = "DESTROYED"
     job.completed_at = datetime.utcnow()
     job.destroyed_at = datetime.utcnow()
-    session.ended_at = datetime.utcnow()
+    
+    session = db.query(PrintSession).filter(
+        PrintSession.job_id == job.id,
+        PrintSession.shop_user_id == current_user.id,
+        PrintSession.ended_at.is_(None),
+    ).order_by(PrintSession.started_at.desc()).first()
+    if session:
+        session.ended_at = datetime.utcnow()
 
-    printer_desc = f"{selected_printer.printer_name} ({selected_printer.printer_endpoint})" if selected_printer else "Virtual Hardware Spooler (Default)"
     log_audit_event(
         "HARDWARE_PRINT_EXECUTED",
-        f"Print job {job.id} streamed directly to {printer_desc} and memory shredded from RAM",
+        f"Print job {job.id} ({len(docs)} documents) streamed to hardware printers and memory shredded",
         ip_address=client_ip,
         user_id=current_user.id,
         status_code=200,
-        detail=f"job_id={job.id}, copies={job.copies}, printer={printer_desc}"
+        detail=f"job_id={job.id}, doc_count={len(docs)}"
     )
 
     db.commit()
@@ -289,11 +305,17 @@ def destroy_document(
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
 
-    session = get_shop_session(db, job, current_user.id)
+    session = db.query(PrintSession).filter(
+        PrintSession.job_id == job.id,
+        PrintSession.shop_user_id == current_user.id,
+        PrintSession.ended_at.is_(None),
+    ).order_by(PrintSession.started_at.desc()).first()
+    if session:
+        session.ended_at = datetime.utcnow()
+
     delete_job_file(job)
     job.status = "DESTROYED"
     job.destroyed_at = datetime.utcnow()
-    session.ended_at = datetime.utcnow()
 
     db.commit()
     return to_job_response(job)

@@ -175,45 +175,65 @@ export default function ConfirmPrint() {
               
               {/* Job Specification Card */}
               <div className="p-6 rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-xs">
-                <h2 className="text-xs font-bold uppercase tracking-widest text-[var(--ink-muted)] mb-4 flex items-center gap-2">
-                  <FileText size={15} className="text-[var(--ink)]" />
-                  Job Parameters (Read-Only)
+                <h2 className="text-xs font-bold uppercase tracking-widest text-[var(--ink-muted)] mb-4 flex items-center justify-between">
+                  <span className="flex items-center gap-2">
+                    <Layers size={15} className="text-[var(--ink)]" />
+                    Batch Specifications ({job.documents ? job.documents.length : 1} {job.documents?.length === 1 ? 'file' : 'files'})
+                  </span>
+                  <span className="font-mono text-[11px] text-[var(--ink-muted)]">{job.printId || job.print_id}</span>
                 </h2>
 
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div className="p-3.5 rounded-xl bg-[var(--surface-muted)] border border-[var(--line)]/50">
-                    <span className="text-xs text-[var(--ink-muted)] block mb-1">File Name</span>
-                    <span className="font-semibold text-[var(--ink)] break-all">{job.fileName}</span>
-                  </div>
+                {job.documents && job.documents.length > 0 ? (
+                  <div className="flex flex-col gap-2.5">
+                    {job.documents.map((d, idx) => (
+                      <div key={d.id || idx} className="p-3.5 rounded-xl bg-[var(--surface-muted)] border border-[var(--line)]/50 flex flex-col md:flex-row md:items-center justify-between gap-3 text-sm">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <div className="p-2 rounded-lg bg-[var(--canvas)] text-[var(--ink)] shrink-0">
+                            <FileText size={15} />
+                          </div>
+                          <div className="min-w-0">
+                            <strong className="text-xs font-semibold text-[var(--ink)] block truncate max-w-xs">{d.fileName}</strong>
+                            <span className="text-[11px] text-[var(--ink-muted)] font-mono">{d.fileType?.toUpperCase()}</span>
+                          </div>
+                        </div>
 
-                  <div className="p-3.5 rounded-xl bg-[var(--surface-muted)] border border-[var(--line)]/50">
-                    <span className="text-xs text-[var(--ink-muted)] block mb-1">Document Format</span>
-                    <span className="font-semibold text-[var(--ink)] uppercase font-mono">{job.fileType || 'PDF'}</span>
+                        <div className="flex flex-wrap items-center gap-1.5 text-xs font-mono">
+                          <span className="px-2 py-0.5 rounded bg-[var(--canvas)] border border-[var(--line)] font-bold">{d.copies}x</span>
+                          <span className="px-2 py-0.5 rounded bg-[var(--canvas)] border border-[var(--line)]">{d.paperSize}</span>
+                          <span className={`px-2 py-0.5 rounded border ${d.colorMode === 'Color' ? 'bg-amber-500/10 text-amber-600 border-amber-500/20 font-bold' : 'bg-[var(--canvas)] border-[var(--line)]'}`}>
+                            {d.colorMode}
+                          </span>
+                          <span className="px-2 py-0.5 rounded bg-[var(--canvas)] border border-[var(--line)] text-[var(--ink-muted)]">{d.orientation}</span>
+                        </div>
+                      </div>
+                    ))}
                   </div>
+                ) : (
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div className="p-3.5 rounded-xl bg-[var(--surface-muted)] border border-[var(--line)]/50">
+                      <span className="text-xs text-[var(--ink-muted)] block mb-1">File Name</span>
+                      <span className="font-semibold text-[var(--ink)] break-all">{job.fileName || 'Document'}</span>
+                    </div>
 
-                  <div className="p-3.5 rounded-xl bg-[var(--surface-muted)] border border-[var(--line)]/50">
-                    <span className="text-xs text-[var(--ink-muted)] block mb-1">Copies Required</span>
-                    <span className="font-semibold text-[var(--ink)] font-mono text-base">{job.copies} {job.copies > 1 ? 'copies' : 'copy'}</span>
-                  </div>
+                    <div className="p-3.5 rounded-xl bg-[var(--surface-muted)] border border-[var(--line)]/50">
+                      <span className="text-xs text-[var(--ink-muted)] block mb-1">Document Format</span>
+                      <span className="font-semibold text-[var(--ink)] uppercase font-mono">{job.fileType || 'PDF'}</span>
+                    </div>
 
-                  <div className="p-3.5 rounded-xl bg-[var(--surface-muted)] border border-[var(--line)]/50">
-                    <span className="text-xs text-[var(--ink-muted)] block mb-1">Color Mode</span>
-                    <span className={`font-semibold inline-flex items-center gap-1.5 ${job.color_mode === 'Color' ? 'text-blue-600 dark:text-blue-400' : 'text-[var(--ink)]'}`}>
-                      <Palette size={13} />
-                      {job.color_mode}
-                    </span>
-                  </div>
+                    <div className="p-3.5 rounded-xl bg-[var(--surface-muted)] border border-[var(--line)]/50">
+                      <span className="text-xs text-[var(--ink-muted)] block mb-1">Copies Required</span>
+                      <span className="font-semibold text-[var(--ink)] font-mono text-base">{job.copies || 1} {job.copies > 1 ? 'copies' : 'copy'}</span>
+                    </div>
 
-                  <div className="p-3.5 rounded-xl bg-[var(--surface-muted)] border border-[var(--line)]/50">
-                    <span className="text-xs text-[var(--ink-muted)] block mb-1">Paper Size & Layout</span>
-                    <span className="font-semibold text-[var(--ink)]">{job.paper_size} • {job.orientation}</span>
+                    <div className="p-3.5 rounded-xl bg-[var(--surface-muted)] border border-[var(--line)]/50">
+                      <span className="text-xs text-[var(--ink-muted)] block mb-1">Color Mode</span>
+                      <span className={`font-semibold inline-flex items-center gap-1.5 ${job.color_mode === 'Color' ? 'text-blue-600 dark:text-blue-400' : 'text-[var(--ink)]'}`}>
+                        <Palette size={13} />
+                        {job.color_mode || 'Black & White'}
+                      </span>
+                    </div>
                   </div>
-
-                  <div className="p-3.5 rounded-xl bg-[var(--surface-muted)] border border-[var(--line)]/50">
-                    <span className="text-xs text-[var(--ink-muted)] block mb-1">Page Range</span>
-                    <span className="font-semibold text-[var(--ink)] font-mono">{job.page_range}</span>
-                  </div>
-                </div>
+                )}
 
                 <div className="mt-4 pt-4 border-t border-[var(--line)] flex items-center justify-between text-xs text-[var(--ink-muted)]">
                   <span>Customer Identifier:</span>

@@ -14,7 +14,6 @@ export const JOB_STATUS = {
   DESTROYED: 'DESTROYED',
   EXPIRED: 'EXPIRED',
   FAILED: 'FAILED',
-  SESSION_LOCKED: 'SESSION_LOCKED',
 };
 
 // Status display config
@@ -29,7 +28,6 @@ export const STATUS_CONFIG = {
   [JOB_STATUS.DESTROYED]: { label: 'Document Removed', color: 'green', icon: 'ShieldCheck' },
   [JOB_STATUS.EXPIRED]: { label: 'Expired', color: 'red', icon: 'XCircle' },
   [JOB_STATUS.FAILED]: { label: 'Print Failed', color: 'red', icon: 'AlertTriangle' },
-  [JOB_STATUS.SESSION_LOCKED]: { label: 'Session Locked', color: 'red', icon: 'ShieldOff' },
 };
 
 // Document lifecycle stages (in order)

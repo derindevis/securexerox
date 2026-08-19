@@ -2,36 +2,37 @@ import { useRef, useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   FileUp, Minus, Plus, X, ShieldCheck, Store, Printer,
-  AlertCircle, CheckCircle2, Search, Palette, Sparkles, RefreshCw
+  AlertCircle, CheckCircle2, Search, Palette, Sparkles, RefreshCw,
+  Camera, Copy, Trash2, Layers, ChevronDown, ChevronUp, FileText, Lock
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import PageTransition from '../../components/common/PageTransition';
+import QrScannerModal from '../../components/common/QrScannerModal';
 import { api } from '../../utils/api';
+import { PAPER_SIZES, COLOR_MODES, ORIENTATIONS, formatFileSize } from '../../utils/constants';
 
-const allowed = ['application/pdf', 'image/jpeg', 'image/png'];
+const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'application/msword'];
 
 export default function UploadDocument() {
   const [searchParams, setSearchParams] = useSearchParams();
   const shopParam = searchParams.get('shop');
 
-  const [file, setFile] = useState(null);
+  // Multi-document array state
+  // Each entry: { id, file, copies, paperSize, colorMode, orientation, pageRange, isExpanded }
+  const [documents, setDocuments] = useState([]);
   const [drag, setDrag] = useState(false);
-  const [settings, setSettings] = useState({
-    copies: 1,
-    paperSize: 'A4',
-    colorMode: 'Black & White',
-    orientation: 'Portrait',
-    pageRange: 'All',
-  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Shop destination state
   const [targetShop, setTargetShop] = useState(null);
   const [loadingShop, setLoadingShop] = useState(false);
   const [shopError, setShopError] = useState(null);
   const [manualShopInput, setManualShopInput] = useState('');
   const [isChangingShop, setIsChangingShop] = useState(false);
   const [publicShops, setPublicShops] = useState([]);
+  const [isQrModalOpen, setIsQrModalOpen] = useState(false);
 
-  const input = useRef();
+  const fileInputRef = useRef();
   const nav = useNavigate();
   const { createJob, addToast } = useApp();
 
@@ -47,13 +48,13 @@ export default function UploadDocument() {
       try {
         const info = await api.getShopPublicInfo(idToLookup);
         setTargetShop(info);
-        // Enforce B&W if shop lacks color capability
+        // If shop lacks color capability, adjust any color documents to Black & White
         if (!info.isColorCapable) {
-          setSettings(s => ({ ...s, colorMode: 'Black & White' }));
+          setDocuments(prev => prev.map(d => ({ ...d, colorMode: 'Black & White' })));
         }
       } catch (err) {
         console.error('Failed to load shop info:', err);
-        setShopError(`Shop '${idToLookup}' not found. You can still upload to Universal Vault.`);
+        setShopError(`Shop '${idToLookup}' not found. Defaulting to Universal Vault Mode.`);
         setTargetShop(null);
       } finally {
         setLoadingShop(false);
@@ -94,66 +95,132 @@ export default function UploadDocument() {
     setIsChangingShop(false);
   };
 
-  const choose = (f) => {
-    if (!f) return;
-    if (!allowed.includes(f.type) || f.size > 10 * 1024 * 1024) {
-      addToast('Choose a PDF, JPG, or PNG up to 10 MB.', 'error');
-      return;
+  const handleScanSuccess = (scannedShopId) => {
+    if (scannedShopId) {
+      setSearchParams({ shop: scannedShopId });
+      addToast(`Connected to Shop '${scannedShopId}'`, 'success');
     }
-    setFile(f);
   };
 
-  const submit = async () => {
-    if (!file) {
-      addToast('Choose a document first.', 'warning');
+  // Add files to documents state
+  const handleAddFiles = (fileList) => {
+    if (!fileList || fileList.length === 0) return;
+
+    const newDocs = [];
+    for (let i = 0; i < fileList.length; i++) {
+      const f = fileList[i];
+      if (f.size > 10 * 1024 * 1024) {
+        addToast(`'${f.name}' exceeds 10 MB limit.`, 'error');
+        continue;
+      }
+      newDocs.push({
+        id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        file: f,
+        copies: 1,
+        paperSize: 'A4',
+        colorMode: targetShop && !targetShop.isColorCapable ? 'Black & White' : 'Black & White',
+        orientation: 'Portrait',
+        pageRange: 'All',
+        isExpanded: documents.length === 0 && i === 0, // expand first by default
+      });
+    }
+
+    if (newDocs.length > 0) {
+      setDocuments(prev => [...prev, ...newDocs]);
+    }
+  };
+
+  // Update specific document configuration
+  const updateDocConfig = (id, key, val) => {
+    setDocuments(prev => prev.map(doc => {
+      if (doc.id === id) {
+        // Color capability check
+        if (key === 'colorMode' && val === 'Color' && targetShop && !targetShop.isColorCapable) {
+          addToast(`'${targetShop.shopName}' only supports Black & White printing.`, 'error');
+          return doc;
+        }
+        return { ...doc, [key]: val };
+      }
+      return doc;
+    }));
+  };
+
+  // Remove document from batch
+  const removeDoc = (id) => {
+    setDocuments(prev => prev.filter(d => d.id !== id));
+  };
+
+  // Duplicate settings to all documents
+  const applySettingsToAll = (sourceDoc) => {
+    setDocuments(prev => prev.map(d => ({
+      ...d,
+      copies: sourceDoc.copies,
+      paperSize: sourceDoc.paperSize,
+      colorMode: sourceDoc.colorMode,
+      orientation: sourceDoc.orientation,
+      pageRange: sourceDoc.pageRange,
+    })));
+    addToast('Applied specifications to all documents in batch.', 'info');
+  };
+
+  // Submit batch job
+  const submitBatch = async () => {
+    if (documents.length === 0) {
+      addToast('Please add at least one document.', 'warning');
       return;
     }
 
-    // Validate color capability on frontend before submitting
-    if (targetShop && !targetShop.isColorCapable && settings.colorMode === 'Color') {
-      addToast(`'${targetShop.shopName}' only supports Black & White printing.`, 'error');
-      return;
+    // Pre-flight validation
+    for (const doc of documents) {
+      if (targetShop && !targetShop.isColorCapable && doc.colorMode === 'Color') {
+        addToast(`'${targetShop.shopName}' only supports Black & White printing.`, 'error');
+        return;
+      }
+      if (doc.copies < 1 || doc.copies > 100) {
+        addToast(`Copies must be between 1 and 100 for '${doc.file.name}'.`, 'error');
+        return;
+      }
     }
 
-    const data = {
-      name: file.name,
-      type: file.type.includes('pdf') ? 'pdf' : file.type.includes('png') ? 'png' : 'jpg',
-      size: file.size,
-    };
-
-    const finalSettings = {
-      ...settings,
-      shopPublicId: targetShop?.shopPublicId || null,
-    };
-
+    setIsSubmitting(true);
     try {
-      const job = await createJob(data, finalSettings, file);
+      const globalSettings = {
+        shopPublicId: targetShop?.shopPublicId || null,
+      };
+
+      const job = await createJob(documents, globalSettings);
       nav(`/customer/print-id/${job.id}`);
     } catch (err) {
-      addToast(err.message || 'Failed to upload document', 'error');
+      console.error('Batch upload error:', err);
+      addToast(err.message || 'Failed to encrypt and upload batch', 'error');
+    } finally {
+      setIsSubmitting(false);
     }
   };
+
+  const totalCopies = documents.reduce((sum, d) => sum + Number(d.copies || 1), 0);
+  const colorCount = documents.filter(d => d.colorMode === 'Color').length;
 
   return (
     <PageTransition>
       <main className="sx-page">
         <div className="sx-wrap">
-          
-          {/* Header */}
+
+          {/* ── Header ── */}
           <div className="mb-6">
             <p className="sx-kicker flex items-center gap-2">
               <ShieldCheck size={14} className="text-[var(--emerald)]" />
-              Zero-Knowledge Document Vault
+              Client-Side RAM Encryption Vault
             </p>
-            <h1 className="sx-title" style={{ fontSize: 'clamp(2.5rem, 5vw, 4.2rem)' }}>
-              Prepare the<br /><em>one-time access.</em>
+            <h1 className="sx-title" style={{ fontSize: 'clamp(2.4rem, 4.5vw, 3.8rem)' }}>
+              Prepare batch<br /><em>print access.</em>
             </h1>
             <p className="sx-lede text-sm mt-1">
-              Encrypted in client-side RAM. Never written to unencrypted disk. Ephemeral 10-minute PIN release.
+              Encrypted in browser memory. Individual configurations per file. Ephemeral single-use PIN release.
             </p>
           </div>
 
-          {/* Shop Destination Banner (Path A: Scanned QR / Path B: Manual Shop ID) */}
+          {/* ── Print Destination Banner (QR Scan / Shop Code Entry) ── */}
           <section className="mb-8 p-4 md:p-5 rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-xs">
             {targetShop ? (
               <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
@@ -164,7 +231,7 @@ export default function UploadDocument() {
                   <div>
                     <div className="flex items-center gap-2">
                       <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--emerald)] px-2 py-0.5 rounded-md bg-[var(--emerald-soft)]">
-                        Verified Shop Target
+                        Verified Counter Target
                       </span>
                       <span className="font-mono text-xs font-bold text-[var(--ink)] bg-[var(--surface-muted)] px-2 py-0.5 rounded-md border border-[var(--line)]">
                         {targetShop.shopPublicId}
@@ -182,6 +249,13 @@ export default function UploadDocument() {
                 </div>
 
                 <div className="flex items-center gap-2 w-full md:w-auto justify-end">
+                  <button
+                    type="button"
+                    onClick={() => setIsQrModalOpen(true)}
+                    className="sx-button text-xs py-1.5 px-3 cursor-pointer"
+                  >
+                    <Camera size={13} /> Re-scan QR
+                  </button>
                   <button
                     type="button"
                     onClick={() => setIsChangingShop(true)}
@@ -213,24 +287,41 @@ export default function UploadDocument() {
                       Universal Vault Mode (Release at any counter)
                     </strong>
                     <p className="text-xs text-[var(--ink-muted)] mt-0.5">
-                      Scan a shop's counter QR or enter their Shop ID to lock this job to a specific counter.
+                      Scan the shop's counter standee QR or type their Shop ID to link this batch directly.
                     </p>
                   </div>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() => setIsChangingShop(true)}
-                  className="text-xs font-semibold text-[var(--ink)] px-3 py-1.5 rounded-lg border border-[var(--line)] hover:bg-[var(--surface-muted)] transition-colors flex items-center gap-1.5 cursor-pointer w-full md:w-auto justify-center"
-                >
-                  <Search size={13} /> Select Shop ID
-                </button>
+                <div className="flex items-center gap-2 w-full md:w-auto">
+                  <button
+                    type="button"
+                    onClick={() => setIsQrModalOpen(true)}
+                    className="sx-button text-xs py-2 px-3.5 justify-center flex-1 md:flex-none cursor-pointer"
+                  >
+                    <Camera size={14} /> Scan Shop QR
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsChangingShop(true)}
+                    className="text-xs font-semibold text-[var(--ink)] px-3 py-2 rounded-xl border border-[var(--line)] hover:bg-[var(--surface-muted)] transition-colors flex items-center justify-center gap-1.5 cursor-pointer flex-1 md:flex-none"
+                  >
+                    <Search size={13} /> Enter Shop Code
+                  </button>
+                </div>
               </div>
             )}
 
-            {/* Change / Select Shop Drawer */}
+            {/* Shop Error Alert */}
+            {shopError && (
+              <div className="mt-3 p-2.5 rounded-xl bg-[var(--danger-soft)] text-[var(--danger)] text-xs flex items-center gap-2 border border-[var(--danger)]/20">
+                <AlertCircle size={14} className="shrink-0" />
+                <span>{shopError}</span>
+              </div>
+            )}
+
+            {/* Manual Shop Entry Drawer */}
             {isChangingShop && (
-              <div className="mt-4 pt-4 border-t border-[var(--line)] flex flex-col gap-3">
+              <div className="mt-4 pt-4 border-t border-[var(--line)] flex flex-col gap-3 animate-in fade-in duration-150">
                 <div className="flex flex-col md:flex-row items-center gap-3">
                   <input
                     type="text"
@@ -258,14 +349,14 @@ export default function UploadDocument() {
                 </div>
 
                 {publicShops.length > 0 && (
-                  <div className="flex flex-wrap items-center gap-2 pt-1">
-                    <span className="text-[11px] text-[var(--ink-muted)]">Available Shops:</span>
-                    {publicShops.map(s => (
+                  <div className="flex flex-wrap items-center gap-1.5 text-xs text-[var(--ink-muted)] mt-1">
+                    <span>Available Shops:</span>
+                    {publicShops.slice(0, 4).map((s) => (
                       <button
                         key={s.id}
                         type="button"
                         onClick={() => handleApplyManualShop(s.shopPublicId)}
-                        className="text-[11px] font-mono px-2 py-1 rounded-md bg-[var(--surface-muted)] hover:bg-[var(--line)] border border-[var(--line)] text-[var(--ink)] transition-colors cursor-pointer"
+                        className="px-2 py-1 rounded-md bg-[var(--surface-muted)] hover:bg-[var(--line)] text-[var(--ink)] border border-[var(--line)] transition-colors cursor-pointer text-[11px]"
                       >
                         {s.shopName} ({s.shopPublicId})
                       </button>
@@ -274,150 +365,258 @@ export default function UploadDocument() {
                 )}
               </div>
             )}
-
-            {shopError && (
-              <div className="mt-3 p-2.5 rounded-xl bg-[var(--amber-soft)] border border-[var(--amber)]/20 text-[var(--amber)] text-xs flex items-center gap-2">
-                <AlertCircle size={14} className="shrink-0" />
-                <span>{shopError}</span>
-              </div>
-            )}
           </section>
 
-          <div className="sx-grid">
-            {/* Upload Zone */}
-            <section className="sx-panel col-span-12 lg:col-span-7">
-              <p className="sx-kicker mb-4">01 · Document</p>
-              <button
-                type="button"
-                onDragOver={(e) => { e.preventDefault(); setDrag(true); }}
-                onDragLeave={() => setDrag(false)}
-                onDrop={(e) => { e.preventDefault(); setDrag(false); choose(e.dataTransfer.files[0]); }}
-                onClick={() => input.current.click()}
-                className={`sx-dropzone ${drag ? 'sx-dropzone--active' : ''} cursor-pointer`}
-              >
-                <FileUp size={30} className="mx-auto text-[var(--ink-secondary)]" />
-                <strong className="mt-4 block text-[var(--ink)] font-semibold">
-                  {file ? file.name : 'Drop a document here'}
-                </strong>
-                <span className="mt-2 block text-sm text-[var(--ink-muted)]">
-                  PDF, JPG or PNG · up to 10 MB
-                </span>
-              </button>
-              <input
-                ref={input}
-                onChange={(e) => choose(e.target.files[0])}
-                className="hidden"
-                type="file"
-                accept=".pdf,.jpg,.jpeg,.png"
-              />
-              {file && (
+          {/* ── Multi-File Dropzone ── */}
+          <div className="mb-8">
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+              className="hidden"
+              onChange={(e) => handleAddFiles(e.target.files)}
+            />
+
+            <div
+              onDragOver={(e) => { e.preventDefault(); setDrag(true); }}
+              onDragLeave={() => setDrag(false)}
+              onDrop={(e) => {
+                e.preventDefault();
+                setDrag(false);
+                handleAddFiles(e.dataTransfer.files);
+              }}
+              onClick={() => fileInputRef.current?.click()}
+              className={`p-8 md:p-10 rounded-3xl border-2 border-dashed transition-all duration-200 text-center cursor-pointer flex flex-col items-center justify-center ${
+                drag
+                  ? 'border-[var(--ink)] bg-[var(--surface-muted)] scale-[0.99]'
+                  : 'border-[var(--line)] bg-[var(--surface)] hover:border-[var(--ink-muted)] hover:bg-[var(--surface-muted)]/50'
+              }`}
+            >
+              <div className="w-14 h-14 rounded-2xl bg-[var(--surface-muted)] border border-[var(--line)] flex items-center justify-center text-[var(--ink)] mb-3 shadow-xs">
+                <FileUp size={26} />
+              </div>
+              <strong className="text-base font-semibold text-[var(--ink)] block mb-1">
+                {documents.length === 0 ? 'Upload Documents for Printing' : 'Add More Files to Batch'}
+              </strong>
+              <p className="text-xs text-[var(--ink-muted)] max-w-md">
+                Drag & drop PDFs, Images, or DOCX files here, or click to browse. Select multiple files for one release PIN.
+              </p>
+              <span className="mt-3 text-[11px] font-mono px-2.5 py-1 rounded-md bg-[var(--canvas)] border border-[var(--line)] text-[var(--ink-muted)]">
+                PDF • JPG • PNG • DOCX (Max 10 MB per file)
+              </span>
+            </div>
+          </div>
+
+          {/* ── Document List & Per-File Configuration Cards ── */}
+          {documents.length > 0 && (
+            <div className="mb-8 flex flex-col gap-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Layers size={18} className="text-[var(--ink)]" />
+                  <h2 className="text-lg font-bold text-[var(--ink)]">
+                    Batch Documents ({documents.length})
+                  </h2>
+                </div>
                 <button
                   type="button"
-                  onClick={() => setFile(null)}
-                  className="mt-4 flex items-center gap-2 text-sm text-[var(--danger)] cursor-pointer"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="text-xs font-semibold text-[var(--ink)] hover:underline flex items-center gap-1 cursor-pointer"
                 >
-                  <X size={15} /> Remove document
+                  <Plus size={14} /> Add Another File
                 </button>
-              )}
-            </section>
-
-            {/* Settings */}
-            <aside className="sx-panel col-span-12 lg:col-span-5">
-              <p className="sx-kicker mb-4">02 · Print preferences</p>
-              
-              {/* Copies */}
-              <div className="sx-field">
-                <label>Copies</label>
-                <div className="flex items-center gap-4">
-                  <button
-                    type="button"
-                    onClick={() => setSettings(s => ({ ...s, copies: Math.max(1, s.copies - 1) }))}
-                    className="p-2 border border-[var(--line-strong)] rounded-lg hover:bg-black/3 transition-colors cursor-pointer"
-                  >
-                    <Minus size={15} />
-                  </button>
-                  <b className="text-lg font-mono">{settings.copies}</b>
-                  <button
-                    type="button"
-                    onClick={() => setSettings(s => ({ ...s, copies: s.copies + 1 }))}
-                    className="p-2 border border-[var(--line-strong)] rounded-lg hover:bg-black/3 transition-colors cursor-pointer"
-                  >
-                    <Plus size={15} />
-                  </button>
-                </div>
               </div>
 
-              {/* Paper Size */}
-              <div className="sx-field">
-                <label>Paper Size</label>
-                <select
-                  value={settings.paperSize}
-                  onChange={(e) => setSettings(s => ({ ...s, paperSize: e.target.value }))}
+              {documents.map((doc, index) => (
+                <div
+                  key={doc.id}
+                  className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4 md:p-5 shadow-xs transition-all"
                 >
-                  <option value="A4">A4 (Standard)</option>
-                  <option value="A3">A3 (Large)</option>
-                  <option value="Letter">Letter</option>
-                  <option value="Legal">Legal</option>
-                </select>
-              </div>
+                  {/* Card Header Row */}
+                  <div className="flex items-start md:items-center justify-between gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-10 h-10 rounded-xl bg-[var(--canvas)] border border-[var(--line)] flex items-center justify-center text-[var(--ink)] shrink-0 font-bold text-xs">
+                        #{index + 1}
+                      </div>
+                      <div className="min-w-0">
+                        <strong className="text-sm font-semibold text-[var(--ink)] block truncate max-w-xs md:max-w-md">
+                          {doc.file.name}
+                        </strong>
+                        <div className="flex items-center gap-2 text-xs text-[var(--ink-muted)] mt-0.5">
+                          <span>{formatFileSize(doc.file.size)}</span>
+                          <span>•</span>
+                          <span className="font-mono text-[11px]">
+                            {doc.copies} {doc.copies === 1 ? 'copy' : 'copies'} • {doc.colorMode} • {doc.paperSize}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
 
-              {/* Color Mode with Smart Capability Enforcement */}
-              <div className="sx-field">
-                <div className="flex items-center justify-between mb-1">
-                  <label>Color Mode</label>
-                  {targetShop && !targetShop.isColorCapable && (
-                    <span className="text-[10px] text-[var(--ink-muted)] bg-[var(--surface-muted)] px-2 py-0.5 rounded-md border border-[var(--line)] font-medium">
-                      🔒 Shop offers B&W only
-                    </span>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      {documents.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => applySettingsToAll(doc)}
+                          className="p-2 rounded-lg hover:bg-[var(--surface-muted)] text-[var(--ink-muted)] hover:text-[var(--ink)] transition-colors cursor-pointer"
+                          title="Apply this file's settings to all files"
+                        >
+                          <Copy size={16} />
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => removeDoc(doc.id)}
+                        className="p-2 rounded-lg hover:bg-[var(--danger-soft)] text-[var(--danger)] transition-colors cursor-pointer"
+                        title="Remove file"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => updateDocConfig(doc.id, 'isExpanded', !doc.isExpanded)}
+                        className="p-2 rounded-lg hover:bg-[var(--surface-muted)] text-[var(--ink)] transition-colors cursor-pointer"
+                      >
+                        {doc.isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Expandable Per-Document Settings Sub-Form */}
+                  {doc.isExpanded && (
+                    <div className="mt-4 pt-4 border-t border-[var(--line)] grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 animate-in fade-in duration-150">
+                      
+                      {/* Copies Stepper */}
+                      <div className="sx-field" style={{ margin: 0 }}>
+                        <label className="text-xs font-medium text-[var(--ink-muted)]">Copies</label>
+                        <div className="flex items-center gap-2 mt-1">
+                          <button
+                            type="button"
+                            onClick={() => updateDocConfig(doc.id, 'copies', Math.max(1, doc.copies - 1))}
+                            className="w-8 h-8 rounded-lg border border-[var(--line)] bg-[var(--canvas)] hover:bg-[var(--surface-muted)] flex items-center justify-center text-[var(--ink)] font-bold cursor-pointer"
+                          >
+                            <Minus size={13} />
+                          </button>
+                          <input
+                            type="number"
+                            min="1"
+                            max="100"
+                            value={doc.copies}
+                            onChange={(e) => updateDocConfig(doc.id, 'copies', Math.max(1, parseInt(e.target.value) || 1))}
+                            className="w-14 text-center p-1.5 text-xs rounded-lg border border-[var(--line)] bg-[var(--canvas)] font-bold"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => updateDocConfig(doc.id, 'copies', Math.min(100, doc.copies + 1))}
+                            className="w-8 h-8 rounded-lg border border-[var(--line)] bg-[var(--canvas)] hover:bg-[var(--surface-muted)] flex items-center justify-center text-[var(--ink)] font-bold cursor-pointer"
+                          >
+                            <Plus size={13} />
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Color Mode */}
+                      <div className="sx-field" style={{ margin: 0 }}>
+                        <label className="text-xs font-medium text-[var(--ink-muted)]">Color Mode</label>
+                        <select
+                          value={doc.colorMode}
+                          onChange={(e) => updateDocConfig(doc.id, 'colorMode', e.target.value)}
+                          className="w-full mt-1 p-2 text-xs rounded-lg border border-[var(--line)] bg-[var(--canvas)] text-[var(--ink)]"
+                        >
+                          {COLOR_MODES.map((mode) => (
+                            <option
+                              key={mode}
+                              value={mode}
+                              disabled={mode === 'Color' && targetShop && !targetShop.isColorCapable}
+                            >
+                              {mode} {mode === 'Color' && targetShop && !targetShop.isColorCapable ? '(Shop lacks color)' : ''}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {/* Paper Size */}
+                      <div className="sx-field" style={{ margin: 0 }}>
+                        <label className="text-xs font-medium text-[var(--ink-muted)]">Paper Size</label>
+                        <select
+                          value={doc.paperSize}
+                          onChange={(e) => updateDocConfig(doc.id, 'paperSize', e.target.value)}
+                          className="w-full mt-1 p-2 text-xs rounded-lg border border-[var(--line)] bg-[var(--canvas)] text-[var(--ink)]"
+                        >
+                          {PAPER_SIZES.map((size) => (
+                            <option key={size} value={size}>{size}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {/* Page Range */}
+                      <div className="sx-field" style={{ margin: 0 }}>
+                        <label className="text-xs font-medium text-[var(--ink-muted)]">Page Range</label>
+                        <input
+                          type="text"
+                          value={doc.pageRange}
+                          placeholder="All or 1-5"
+                          onChange={(e) => updateDocConfig(doc.id, 'pageRange', e.target.value)}
+                          className="w-full mt-1 p-2 text-xs rounded-lg border border-[var(--line)] bg-[var(--canvas)] text-[var(--ink)]"
+                        />
+                      </div>
+
+                    </div>
                   )}
                 </div>
-                <select
-                  value={settings.colorMode}
-                  onChange={(e) => setSettings(s => ({ ...s, colorMode: e.target.value }))}
-                  disabled={targetShop && !targetShop.isColorCapable}
-                >
-                  <option value="Black & White">Black & White (Monochrome)</option>
-                  {(!targetShop || targetShop.isColorCapable) && (
-                    <option value="Color">Full Color</option>
-                  )}
-                </select>
-              </div>
+              ))}
+            </div>
+          )}
 
-              {/* Orientation */}
-              <div className="sx-field">
-                <label>Orientation</label>
-                <select
-                  value={settings.orientation}
-                  onChange={(e) => setSettings(s => ({ ...s, orientation: e.target.value }))}
-                >
-                  <option value="Portrait">Portrait</option>
-                  <option value="Landscape">Landscape</option>
-                </select>
-              </div>
+          {/* ── Batch Summary & Submit Action ── */}
+          {documents.length > 0 && (
+            <div className="p-6 rounded-3xl border border-[var(--line)] bg-[var(--surface)] shadow-sm">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                <div>
+                  <strong className="text-base font-bold text-[var(--ink)] block">
+                    Batch Print Summary
+                  </strong>
+                  <span className="text-xs text-[var(--ink-muted)]">
+                    {documents.length} {documents.length === 1 ? 'document' : 'documents'} • {totalCopies} total {totalCopies === 1 ? 'copy' : 'copies'}
+                    {colorCount > 0 ? ` (${colorCount} color, ${documents.length - colorCount} B&W)` : ' (All B&W)'}
+                  </span>
+                </div>
 
-              {/* Page Range */}
-              <div className="sx-field">
-                <label>Page Range</label>
-                <input
-                  type="text"
-                  placeholder="e.g. All or 1-5"
-                  value={settings.pageRange}
-                  onChange={(e) => setSettings(s => ({ ...s, pageRange: e.target.value }))}
-                />
+                <div className="flex items-center gap-2 text-xs text-[var(--ink-muted)]">
+                  <Lock size={14} className="text-[var(--emerald)]" />
+                  <span>Ephemeral Client-Side AES-256</span>
+                </div>
               </div>
 
               <button
                 type="button"
-                onClick={submit}
-                className="sx-button mt-6 w-full justify-center text-sm py-3 cursor-pointer shadow-sm"
+                onClick={submitBatch}
+                disabled={isSubmitting}
+                className="sx-button sx-button--lg w-full justify-center py-4 text-base font-semibold shadow-md cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                Create Ephemeral Print ID
+                {isSubmitting ? (
+                  <>
+                    <div className="w-5 h-5 border-2 border-[var(--canvas)]/30 border-t-[var(--canvas)] rounded-full animate-spin" />
+                    Encrypting & Dispatching Batch...
+                  </>
+                ) : (
+                  <>
+                    <ShieldCheck size={20} />
+                    Generate Batch Print PIN ({documents.length} {documents.length === 1 ? 'File' : 'Files'})
+                  </>
+                )}
               </button>
-            </aside>
-          </div>
+            </div>
+          )}
 
         </div>
       </main>
+
+      {/* Camera QR Scanner Modal */}
+      <QrScannerModal
+        isOpen={isQrModalOpen}
+        onClose={() => setIsQrModalOpen(false)}
+        onScanSuccess={handleScanSuccess}
+      />
     </PageTransition>
   );
 }

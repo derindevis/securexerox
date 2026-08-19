@@ -31,21 +31,28 @@ def read_decrypted_file(file_path: str) -> bytes:
     with open(file_path, "rb") as buffer:
         return get_fernet_cipher().decrypt(buffer.read())
 
-def delete_job_file(job: PrintJob) -> bool:
-    if not job.file_path or not os.path.exists(job.file_path):
+def delete_document_file(doc) -> bool:
+    if not doc.file_path or not os.path.exists(doc.file_path):
         return False
     try:
-        file_size = os.path.getsize(job.file_path)
-        with open(job.file_path, "r+b") as file_handle:
+        file_size = os.path.getsize(doc.file_path)
+        with open(doc.file_path, "r+b") as file_handle:
             file_handle.write(b"\x00" * file_size)
             file_handle.flush()
             os.fsync(file_handle.fileno())
-        os.remove(job.file_path)
-        job.file_path = None
+        os.remove(doc.file_path)
+        doc.file_path = None
         return True
     except OSError:
-        logger.error("Unable to remove encrypted document for job %s", job.id)
+        logger.error("Unable to remove encrypted document file %s", getattr(doc, 'id', 'unknown'))
         return False
+
+def delete_job_file(job: PrintJob) -> bool:
+    success = True
+    if hasattr(job, "documents") and job.documents:
+        for doc in job.documents:
+            delete_document_file(doc)
+    return success
 
 def cleanup_expired_jobs(db: Session):
     now = datetime.utcnow()

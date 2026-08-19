@@ -236,23 +236,50 @@ export function AppProvider({ children }) {
     dispatch({ type: ACTIONS.LOGOUT });
   }, []);
 
-  // Job creation action
-  const createJob = useCallback(async (fileData, printSettings, rawFile = null) => {
+  // Job creation action (Supports both batch documents array and single file fallback)
+  const createJob = useCallback(async (documentsOrFileData, globalOrPrintSettings, rawFile = null) => {
     try {
       const formData = new FormData();
-      if (rawFile) {
-        formData.append('file', rawFile);
-      }
-      formData.append('fileName', fileData.name);
-      formData.append('fileType', fileData.type);
-      formData.append('fileSize', fileData.size);
-      formData.append('copies', printSettings.copies || 1);
-      formData.append('paperSize', printSettings.paperSize || 'A4');
-      formData.append('colorMode', printSettings.colorMode || 'Black & White');
-      formData.append('orientation', printSettings.orientation || 'Portrait');
-      formData.append('pageRange', printSettings.pageRange || 'All');
-      if (printSettings.shopPublicId) {
-        formData.append('shopPublicId', printSettings.shopPublicId);
+
+      if (Array.isArray(documentsOrFileData)) {
+        const docs = documentsOrFileData;
+        const shopPublicId = globalOrPrintSettings?.shopPublicId || null;
+        if (shopPublicId) {
+          formData.append('shopPublicId', shopPublicId);
+        }
+
+        const configs = docs.map((d) => ({
+          fileName: d.file.name,
+          fileType: d.file.type.includes('pdf') ? 'pdf' : d.file.type.includes('png') ? 'png' : 'jpg',
+          fileSize: d.file.size,
+          copies: d.copies || 1,
+          paperSize: d.paperSize || 'A4',
+          colorMode: d.colorMode || 'Black & White',
+          orientation: d.orientation || 'Portrait',
+          pageRange: d.pageRange || 'All',
+        }));
+        formData.append('documentsConfig', JSON.stringify(configs));
+
+        docs.forEach((d) => {
+          formData.append('files', d.file);
+        });
+      } else {
+        const fileData = documentsOrFileData;
+        const printSettings = globalOrPrintSettings || {};
+        if (rawFile) {
+          formData.append('files', rawFile);
+        }
+        formData.append('fileName', fileData.name);
+        formData.append('fileType', fileData.type);
+        formData.append('fileSize', fileData.size);
+        formData.append('copies', printSettings.copies || 1);
+        formData.append('paperSize', printSettings.paperSize || 'A4');
+        formData.append('colorMode', printSettings.colorMode || 'Black & White');
+        formData.append('orientation', printSettings.orientation || 'Portrait');
+        formData.append('pageRange', printSettings.pageRange || 'All');
+        if (printSettings.shopPublicId) {
+          formData.append('shopPublicId', printSettings.shopPublicId);
+        }
       }
 
       const newJob = await api.createJob(formData);
@@ -260,31 +287,10 @@ export function AppProvider({ children }) {
       addToast('Print ID generated successfully!', 'success');
       return newJob;
     } catch (e) {
-      const job = {
-        id: generateJobId(),
-        printId: generatePrintId(),
-        fileName: fileData.name,
-        fileType: fileData.type,
-        fileSize: fileData.size,
-        filePreview: fileData.preview || null,
-        copies: printSettings.copies || 1,
-        paperSize: printSettings.paperSize || 'A4',
-        colorMode: printSettings.colorMode || 'Black & White',
-        orientation: printSettings.orientation || 'Portrait',
-        pageRange: printSettings.pageRange || 'All',
-        status: JOB_STATUS.PRINT_ID_GENERATED,
-        createdAt: new Date().toISOString(),
-        completedAt: null,
-        destroyedAt: null,
-        expiresAt: new Date(Date.now() + 600000).toISOString(),
-        violations: 0,
-        customerId: state.currentUser?.id || null,
-      };
-      dispatch({ type: ACTIONS.ADD_JOB, payload: job });
-      addToast('Print ID generated successfully!', 'success');
-      return job;
+      console.error('Create job error:', e);
+      throw e;
     }
-  }, [addToast, state.currentUser]);
+  }, [addToast]);
 
   const updateJobStatus = useCallback((jobId, status, extras = {}) => {
     dispatch({

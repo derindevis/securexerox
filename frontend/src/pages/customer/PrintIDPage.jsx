@@ -1,22 +1,33 @@
 import { useParams, Link } from 'react-router-dom';
-import { Check, Copy, ArrowRight, Clock } from 'lucide-react';
-import { useState } from 'react';
+import { Check, Copy, ArrowRight, Clock, Layers, FileText } from 'lucide-react';
+import { useState, useEffect } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { useApp } from '../../context/AppContext';
 import { useCountdown } from '../../utils/timers';
 import PageTransition from '../../components/common/PageTransition';
+import { api } from '../../utils/api';
 
 export default function PrintIDPage() {
   const { jobId } = useParams();
   const { jobs } = useApp();
   const [copied, setCopied] = useState(false);
-  const job = jobs.find(j => j.id === jobId);
+  const [job, setJob] = useState(() => jobs.find(j => j.id === jobId) || null);
   const time = useCountdown(600, true);
 
+  useEffect(() => {
+    if (!job) {
+      api.getJob(jobId).then(setJob).catch(() => {});
+    }
+  }, [jobId, job]);
+
+  const printIdVal = job?.printId || job?.print_id || '------';
+
   const copy = async () => {
-    await navigator.clipboard.writeText(job.printId);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1600);
+    if (printIdVal) {
+      await navigator.clipboard.writeText(printIdVal);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1600);
+    }
   };
 
   if (!job) return (
@@ -39,7 +50,7 @@ export default function PrintIDPage() {
             <section className="sx-panel col-span-12 lg:col-span-8">
               <p className="sx-kicker">Temporary Print ID</p>
               <p className="sx-id mt-6" style={{ fontSize: 'clamp(2rem, 6vw, 4.5rem)' }}>
-                {job.printId}
+                {printIdVal}
               </p>
               <button onClick={copy} className="sx-button mt-8">
                 {copied ? <Check size={16} /> : <Copy size={16} />}
@@ -60,7 +71,7 @@ export default function PrintIDPage() {
                 {String(Math.floor(time.seconds / 60)).padStart(2, '0')}:{String(time.seconds % 60).padStart(2, '0')}
               </p>
               <div className="mt-7 inline-block bg-white p-3 rounded-xl border border-[var(--line)]">
-                <QRCodeSVG value={job.printId} size={132} />
+                <QRCodeSVG value={printIdVal} size={132} />
               </div>
             </aside>
 

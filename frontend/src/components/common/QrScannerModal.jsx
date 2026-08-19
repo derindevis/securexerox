@@ -1,0 +1,228 @@
+import { useEffect, useRef, useState } from 'react';
+import { Html5Qrcode } from 'html5-qrcode';
+import { X, Camera, RefreshCw, AlertCircle, Sparkles, CheckCircle2 } from 'lucide-react';
+import Modal from './Modal';
+
+export default function QrScannerModal({ isOpen, onClose, onScanSuccess }) {
+  const [cameraError, setCameraError] = useState(null);
+  const [cameras, setCameras] = useState([]);
+  const [selectedCameraId, setSelectedCameraId] = useState(null);
+  const [isScanning, setIsScanning] = useState(false);
+  const [scannedResult, setScannedResult] = useState(null);
+  const scannerRef = useRef(null);
+  const qrRegionId = 'sx-qr-camera-region';
+
+  // Helper to extract Shop ID from raw QR text or URL
+  const extractShopId = (decodedText) => {
+    if (!decodedText) return null;
+    const text = decodedText.trim();
+
+    // Check URL query param e.g. ?shop=SX-SHOP-0042
+    try {
+      if (text.includes('shop=')) {
+        const urlObj = new URL(text.startsWith('http') ? text : `http://dummy.com/${text}`);
+        const shopParam = urlObj.searchParams.get('shop');
+        if (shopParam) return shopParam.toUpperCase();
+      }
+    } catch {
+      // ignore URL parse errors
+    }
+
+    // Check regex pattern SX-SHOP-XXXX or SX-XXXX
+    const match = text.match(/SX-(?:SHOP-)?[A-Z0-9]{4,6}/i);
+    if (match) {
+      return match[0].toUpperCase();
+    }
+
+    return text.toUpperCase();
+  };
+
+  // Initialize camera list and scanner when modal opens
+  useEffect(() => {
+    let html5QrCode = null;
+    let isMounted = true;
+
+    async function initScanner() {
+      if (!isOpen) return;
+      setCameraError(null);
+      setScannedResult(null);
+
+      try {
+        const devices = await Html5Qrcode.getCameras();
+        if (!isMounted) return;
+
+        if (!devices || devices.length === 0) {
+          setCameraError('No video cameras found on this device.');
+          return;
+        }
+
+        setCameras(devices);
+        // Prefer back / environment camera on mobile devices
+        const backCamera = devices.find(d => 
+          d.label.toLowerCase().includes('back') || 
+          d.label.toLowerCase().includes('environment') ||
+          d.label.toLowerCase().includes('rear')
+        );
+        const cameraIdToUse = backCamera ? backCamera.id : devices[0].id;
+        setSelectedCameraId(cameraIdToUse);
+
+        html5QrCode = new Html5Qrcode(qrRegionId);
+        scannerRef.current = html5QrCode;
+
+        await html5QrCode.start(
+          cameraIdToUse,
+          {
+            fps: 10,
+            qrbox: { width: 250, height: 250 },
+            aspectRatio: 1.0,
+          },
+          (decodedText) => {
+            const parsedShopId = extractShopId(decodedText);
+            if (parsedShopId) {
+              setScannedResult(parsedShopId);
+              // Stop camera and trigger callback
+              html5QrCode.stop().then(() => {
+                if (isMounted) {
+                  setIsScanning(false);
+                  setTimeout(() => {
+                    onScanSuccess(parsedShopId);
+                    onClose();
+                  }, 400);
+                }
+              }).catch(() => {
+                if (isMounted) {
+                  onScanSuccess(parsedShopId);
+                  onClose();
+                }
+              });
+            }
+          },
+          () => {
+            // Ignore frame-by-frame scan misses
+          }
+        );
+
+        if (isMounted) setIsScanning(true);
+      } catch (err) {
+        console.error('Camera QR scanner init error:', err);
+        if (isMounted) {
+          setCameraError(
+            err?.name === 'NotAllowedError'
+              ? 'Camera access denied. Please grant camera permission in your browser.'
+              : 'Unable to start camera viewfinder.'
+          );
+        }
+      }
+    }
+
+    if (isOpen) {
+      // Allow DOM element to mount
+      const timer = setTimeout(initScanner, 150);
+      return () => {
+        isMounted = false;
+        clearTimeout(timer);
+        if (scannerRef.current) {
+          scannerRef.current.stop().catch(() => {}).then(() => {
+            scannerRef.current?.clear();
+          });
+        }
+      };
+    }
+  }, [isOpen, onScanSuccess, onClose]);
+
+  // Switch camera
+  const handleSwitchCamera = async () => {
+    if (!scannerRef.current || cameras.length <= 1) return;
+    try {
+      await scannerRef.current.stop();
+      const nextIdx = (cameras.findIndex(c => c.id === selectedCameraId) + 1) % cameras.length;
+      const nextCam = cameras[nextIdx];
+      setSelectedCameraId(nextCam.id);
+
+      await scannerRef.current.start(
+        nextCam.id,
+        { fps: 10, qrbox: { width: 250, height: 250 } },
+        (decodedText) => {
+          const parsedShopId = extractShopId(decodedText);
+          if (parsedShopId) {
+            scannerRef.current.stop().catch(() => {});
+            onScanSuccess(parsedShopId);
+            onClose();
+          }
+        },
+        () => {}
+      );
+    } catch (e) {
+      console.error('Error switching camera:', e);
+    }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <Modal isOpen={isOpen} onClose={onClose} title="Scan Shop Standee QR">
+      <div className="flex flex-col items-center">
+
+        {/* Viewfinder container */}
+        <div className="relative w-full max-w-sm aspect-square rounded-2xl overflow-hidden bg-black/90 border-2 border-[var(--line)] flex items-center justify-center shadow-inner">
+          <div id={qrRegionId} className="w-full h-full" />
+
+          {/* Scanner Reticle Overlay */}
+          {isScanning && !scannedResult && !cameraError && (
+            <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+              <div className="w-64 h-64 border-2 border-emerald-400/80 rounded-2xl relative animate-pulse shadow-[0_0_20px_rgba(52,211,153,0.3)]">
+                <div className="absolute top-0 left-0 w-6 h-6 border-t-4 border-l-4 border-emerald-400 -mt-1 -ml-1 rounded-tl-lg" />
+                <div className="absolute top-0 right-0 w-6 h-6 border-t-4 border-r-4 border-emerald-400 -mt-1 -mr-1 rounded-tr-lg" />
+                <div className="absolute bottom-0 left-0 w-6 h-6 border-b-4 border-l-4 border-emerald-400 -mb-1 -ml-1 rounded-bl-lg" />
+                <div className="absolute bottom-0 right-0 w-6 h-6 border-b-4 border-r-4 border-emerald-400 -mb-1 -mr-1 rounded-br-lg" />
+                <div className="w-full h-0.5 bg-emerald-400/70 absolute top-1/2 -translate-y-1/2 animate-bounce" />
+              </div>
+            </div>
+          )}
+
+          {/* Success Flash */}
+          {scannedResult && (
+            <div className="absolute inset-0 bg-emerald-950/80 backdrop-blur-xs flex flex-col items-center justify-center p-4 text-center text-white animate-in fade-in zoom-in duration-200">
+              <div className="w-14 h-14 rounded-full bg-emerald-500 text-white flex items-center justify-center mb-3 shadow-lg">
+                <CheckCircle2 size={32} />
+              </div>
+              <strong className="text-lg font-bold">Shop Identified!</strong>
+              <span className="font-mono text-sm px-3 py-1 rounded-lg bg-emerald-900/60 border border-emerald-500/30 mt-1">
+                {scannedResult}
+              </span>
+            </div>
+          )}
+
+          {/* Error Message */}
+          {cameraError && (
+            <div className="absolute inset-0 bg-[var(--canvas)] p-6 flex flex-col items-center justify-center text-center">
+              <div className="w-12 h-12 rounded-full bg-[var(--danger-soft)] text-[var(--danger)] flex items-center justify-center mb-3">
+                <AlertCircle size={24} />
+              </div>
+              <p className="text-sm font-semibold text-[var(--ink)] mb-1">Camera Unavailable</p>
+              <p className="text-xs text-[var(--ink-muted)] mb-4">{cameraError}</p>
+              <p className="text-xs text-[var(--ink-muted)]">
+                You can manually type the 6-character Shop ID on the upload screen.
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/* Action Controls */}
+        <div className="mt-4 flex items-center justify-between w-full text-xs text-[var(--ink-muted)] px-1">
+          <span>Align the shop's printed counter standee QR code inside the box.</span>
+          {cameras.length > 1 && (
+            <button
+              type="button"
+              onClick={handleSwitchCamera}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[var(--line)] hover:bg-[var(--surface)] text-[var(--ink)] font-semibold transition-colors cursor-pointer shrink-0 ml-3"
+            >
+              <RefreshCw size={13} /> Switch Camera
+            </button>
+          )}
+        </div>
+
+      </div>
+    </Modal>
+  );
+}

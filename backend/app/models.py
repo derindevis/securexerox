@@ -40,9 +40,25 @@ class PrintJob(Base):
     id = Column(String, primary_key=True, default=generate_uuid)
     print_id = Column(String, unique=True, index=True, nullable=False)
     user_id = Column(String, ForeignKey("users.id"), nullable=False)
-    
-    # Optional target shop assignment
     shop_id = Column(String, ForeignKey("users.id"), nullable=True, index=True)
+    
+    status = Column(String, nullable=False, default="PRINT_ID_GENERATED")
+
+    created_at = Column(DateTime, default=datetime.utcnow)
+    expires_at = Column(DateTime, nullable=True)
+    completed_at = Column(DateTime, nullable=True)
+    destroyed_at = Column(DateTime, nullable=True)
+
+    customer = relationship("User", foreign_keys=[user_id], back_populates="jobs")
+    shop = relationship("User", foreign_keys=[shop_id])
+    documents = relationship("PrintDocument", back_populates="job", cascade="all, delete-orphan")
+    sessions = relationship("PrintSession", back_populates="job", cascade="all, delete-orphan")
+
+class PrintDocument(Base):
+    __tablename__ = "print_documents"
+
+    id = Column(String, primary_key=True, default=generate_uuid)
+    print_job_id = Column(String, ForeignKey("print_jobs.id"), nullable=False)
     
     file_name = Column(String, nullable=False)
     file_path = Column(String, nullable=True)
@@ -54,18 +70,9 @@ class PrintJob(Base):
     color_mode = Column(String, default="Black & White")
     orientation = Column(String, default="Portrait")
     page_range = Column(String, default="All")
-    
-    status = Column(String, nullable=False, default="PRINT_ID_GENERATED")
-    violations = Column(Integer, default=0)
+    print_order = Column(Integer, default=0)
 
-    created_at = Column(DateTime, default=datetime.utcnow)
-    expires_at = Column(DateTime, nullable=True)
-    completed_at = Column(DateTime, nullable=True)
-    destroyed_at = Column(DateTime, nullable=True)
-
-    customer = relationship("User", foreign_keys=[user_id], back_populates="jobs")
-    shop = relationship("User", foreign_keys=[shop_id])
-    sessions = relationship("PrintSession", back_populates="job", cascade="all, delete-orphan")
+    job = relationship("PrintJob", back_populates="documents")
 
 class PrintSession(Base):
     __tablename__ = "print_sessions"
