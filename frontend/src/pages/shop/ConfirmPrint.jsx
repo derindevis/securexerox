@@ -19,7 +19,13 @@ export default function ConfirmPrint() {
     jobs, updateJobStatus, addToast, endSecureSession
   } = useApp();
 
-  const job = jobs.find((j) => j.id === jobId);
+  const [job, setJob] = useState(() => jobs.find((j) => j.id === jobId) || null);
+
+  useEffect(() => {
+    if (!job && jobId) {
+      api.getJob(jobId).then(setJob).catch(() => {});
+    }
+  }, [job, jobId]);
 
   const [printers, setPrinters] = useState([]);
   const [selectedPrinterId, setSelectedPrinterId] = useState('');
