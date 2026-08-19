@@ -61,17 +61,49 @@ def get_client_ip(request: Request) -> str:
         return forwarded.split(",")[0].strip()
     return request.client.host if request.client else "127.0.0.1"
 
+login_ip_rate_limiter = SlidingWindowRateLimiter(max_requests=15, window_seconds=300)     # Max 15 attempts / IP / 5 mins
+verify_token_rate_limiter = SlidingWindowRateLimiter(max_requests=10, window_seconds=300) # Max 10 token verify attempts / 5 mins
+
 def check_login_rate_limit(request: Request, identifier: str = ""):
     client_ip = get_client_ip(request)
+    # Check IP-level brute force
+    allowed_ip, _, retry_after_ip = login_ip_rate_limiter.check(f"login_ip:{client_ip}")
+    if not allowed_ip:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Too many failed login attempts from this network. Please wait 5 minutes before trying again.",
+            headers={
+                "Retry-After": str(retry_after_ip),
+                "X-RateLimit-Limit": str(login_ip_rate_limiter.max_requests),
+                "X-RateLimit-Remaining": "0",
+            },
+        )
+
+    # Check Account-level brute force
     key = f"login:{client_ip}:{identifier.lower().strip()}"
     allowed, remaining, retry_after = login_rate_limiter.check(key)
     if not allowed:
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-            detail="Too many login attempts. Please wait 5 minutes before trying again.",
+            detail="Too many login attempts for this account. Please wait 5 minutes before trying again.",
             headers={
                 "Retry-After": str(retry_after),
                 "X-RateLimit-Limit": str(login_rate_limiter.max_requests),
+                "X-RateLimit-Remaining": "0",
+            },
+        )
+
+def check_verify_email_rate_limit(request: Request):
+    client_ip = get_client_ip(request)
+    key = f"verify_token:{client_ip}"
+    allowed, remaining, retry_after = verify_token_rate_limiter.check(key)
+    if not allowed:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Too many token verification attempts. Please wait 5 minutes.",
+            headers={
+                "Retry-After": str(retry_after),
+                "X-RateLimit-Limit": str(verify_token_rate_limiter.max_requests),
                 "X-RateLimit-Remaining": "0",
             },
         )
