@@ -27,27 +27,7 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
         raise credentials_exception
     return user
 
-def get_optional_current_user_or_guest(token: str = Depends(oauth2_scheme_optional), db: Session = Depends(get_db)) -> User:
-    if token:
-        payload = decode_access_token(token)
-        if payload and payload.get("sub"):
-            user = db.query(User).filter(User.id == payload.get("sub")).first()
-            if user:
-                return user
-    
-    # Auto-provision or retrieve an anonymous guest customer record
-    guest_email = f"guest_{secrets.token_hex(6)}@guest.securexerox.internal"
-    guest_user = User(
-        email=guest_email,
-        password_hash="GUEST_SESSION",
-        name="Walk-in Guest",
-        role="customer",
-        is_verified=True,
-    )
-    db.add(guest_user)
-    db.commit()
-    db.refresh(guest_user)
-    return guest_user
+
 
 def require_role(role: str):
     def role_checker(current_user: User = Depends(get_current_user)):

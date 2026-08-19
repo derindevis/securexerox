@@ -45,18 +45,18 @@ export default function AppRoutes() {
       <Route path="/login" element={<Login />} />
       <Route path="/auth/callback" element={<OAuthCallback />} />
 
-      {/* Customer (Upload & Print-ID are accessible to both guests and logged-in customers) */}
+      {/* Customer */}
       <Route
         path="/customer/upload"
-        element={<UploadDocument />}
+        element={<ProtectedRoute role="customer"><UploadDocument /></ProtectedRoute>}
       />
       <Route
         path="/customer/print-id/:jobId"
-        element={<PrintIDPage />}
+        element={<ProtectedRoute role="customer"><PrintIDPage /></ProtectedRoute>}
       />
       <Route
         path="/customer/track/:jobId"
-        element={<CustomerTrackJob />}
+        element={<ProtectedRoute role="customer"><CustomerTrackJob /></ProtectedRoute>}
       />
       <Route
         path="/customer/dashboard"

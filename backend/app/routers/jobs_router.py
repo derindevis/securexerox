@@ -13,7 +13,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models import User, PrintJob, PrintDocument, ShopPrinter
 from app.schemas import PrintJobResponse, PrintDocumentResponse
-from app.dependencies import get_current_user, require_role, get_optional_current_user_or_guest
+from app.dependencies import get_current_user, require_role
 from app.config import settings
 from app.storage import save_uploaded_file, delete_job_file
 from app.rate_limiter import check_upload_rate_limit
@@ -82,7 +82,7 @@ async def create_job(
     pageRange: str = Form("All"),
     shopPublicId: Optional[str] = Form(None),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_optional_current_user_or_guest),
+    current_user: User = Depends(get_current_user),
 ):
     check_upload_rate_limit(request, current_user.id)
     
@@ -281,19 +281,16 @@ def get_jobs(
 def get_job(
     job_id: str,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_optional_current_user_or_guest),
+    current_user: User = Depends(get_current_user),
 ):
     validate_uuid_format(job_id)
     job = db.query(PrintJob).filter(PrintJob.id == job_id).first()
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
 
-    # Strict IDOR check: Customer must own job, EXCEPT for anonymous guest jobs where the UUID acts as a capability token
+    # Strict IDOR check: Customer must own job, Shop must be the assigned target (or universal unassigned)
     if current_user.role == "customer" and job.user_id != current_user.id:
-        owner = db.query(User).filter(User.id == job.user_id).first()
-        is_guest_owner = owner and owner.email.startswith("guest_")
-        if not is_guest_owner:
-            raise HTTPException(status_code=404, detail="Job not found")
+        raise HTTPException(status_code=404, detail="Job not found")
     elif current_user.role == "shop" and job.shop_id and job.shop_id != current_user.id:
         raise HTTPException(status_code=404, detail="Job not found")
 
@@ -310,12 +307,9 @@ def delete_job(
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
 
-    # Strict IDOR check: Customer must own job, EXCEPT for anonymous guest jobs where the UUID acts as a capability token
+    # Strict IDOR check: Customer must own job, Shop must be the assigned target
     if current_user.role == "customer" and job.user_id != current_user.id:
-        owner = db.query(User).filter(User.id == job.user_id).first()
-        is_guest_owner = owner and owner.email.startswith("guest_")
-        if not is_guest_owner:
-            raise HTTPException(status_code=404, detail="Job not found")
+        raise HTTPException(status_code=404, detail="Job not found")
     elif current_user.role == "shop" and job.shop_id != current_user.id:
         raise HTTPException(status_code=404, detail="Job not found")
 
