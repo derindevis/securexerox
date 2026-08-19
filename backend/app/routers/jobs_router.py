@@ -288,9 +288,12 @@ def get_job(
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
 
-    # Strict IDOR check: Customer must own job, Shop must be the assigned target (or universal unassigned)
+    # Strict IDOR check: Customer must own job, EXCEPT for anonymous guest jobs where the UUID acts as a capability token
     if current_user.role == "customer" and job.user_id != current_user.id:
-        raise HTTPException(status_code=404, detail="Job not found")
+        owner = db.query(User).filter(User.id == job.user_id).first()
+        is_guest_owner = owner and owner.email.startswith("guest_")
+        if not is_guest_owner:
+            raise HTTPException(status_code=404, detail="Job not found")
     elif current_user.role == "shop" and job.shop_id and job.shop_id != current_user.id:
         raise HTTPException(status_code=404, detail="Job not found")
 
@@ -307,9 +310,12 @@ def delete_job(
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
 
-    # Strict IDOR check: Customer must own job, Shop must be the assigned target
+    # Strict IDOR check: Customer must own job, EXCEPT for anonymous guest jobs where the UUID acts as a capability token
     if current_user.role == "customer" and job.user_id != current_user.id:
-        raise HTTPException(status_code=404, detail="Job not found")
+        owner = db.query(User).filter(User.id == job.user_id).first()
+        is_guest_owner = owner and owner.email.startswith("guest_")
+        if not is_guest_owner:
+            raise HTTPException(status_code=404, detail="Job not found")
     elif current_user.role == "shop" and job.shop_id != current_user.id:
         raise HTTPException(status_code=404, detail="Job not found")
 
