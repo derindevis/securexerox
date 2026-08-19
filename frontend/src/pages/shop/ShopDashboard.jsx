@@ -100,7 +100,7 @@ export default function ShopDashboard() {
   const handleAcceptPrint = async (jobId) => {
     try {
       await api.startSession(jobId);
-      window.location.href = `/shop/secure-print/${jobId}`;
+      navigate(`/shop/secure-print/${jobId}`);
     } catch (err) {
       addToast(err.message || 'Failed to accept print job', 'error');
     }

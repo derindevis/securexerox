@@ -1,10 +1,13 @@
+import { useNavigate } from 'react-router-dom';
 import { FileText, Clock, Printer } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { JOB_STATUS, STATUS_CONFIG } from '../../utils/constants';
+import { api } from '../../utils/api';
 import PageTransition from '../../components/common/PageTransition';
 
 export default function PrintQueuePage() {
   const { jobs } = useApp();
+  const navigate = useNavigate();
 
   const queueJobs = jobs.filter(
     (j) => [JOB_STATUS.WAITING, JOB_STATUS.PRINT_ID_GENERATED, JOB_STATUS.SECURE_SESSION, JOB_STATUS.PRINTING].includes(j.status)
@@ -13,7 +16,7 @@ export default function PrintQueuePage() {
   const handleAcceptPrint = async (jobId) => {
     try {
       await api.startSession(jobId);
-      window.location.href = `/shop/secure-print/${jobId}`;
+      navigate(`/shop/secure-print/${jobId}`);
     } catch (err) {
       alert(err.message || 'Failed to accept print job');
     }
