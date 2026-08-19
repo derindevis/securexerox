@@ -18,6 +18,7 @@ import JobDetails from '../pages/customer/JobDetails';
 import ShopDashboard from '../pages/shop/ShopDashboard';
 import PrintDocument from '../pages/shop/PrintDocument';
 import ConfirmPrint from '../pages/shop/ConfirmPrint';
+import SecurePrint from '../pages/shop/SecurePrint';
 import PrintQueuePage from '../pages/shop/PrintQueuePage';
 import PrintHistory from '../pages/shop/PrintHistory';
 
@@ -85,7 +86,7 @@ export default function AppRoutes() {
       />
       <Route
         path="/shop/secure-print/:jobId"
-        element={<ProtectedRoute role="shop"><ConfirmPrint /></ProtectedRoute>}
+        element={<ProtectedRoute role="shop"><SecurePrint /></ProtectedRoute>}
       />
       <Route
         path="/shop/queue"
