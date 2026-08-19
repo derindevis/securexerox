@@ -3,6 +3,7 @@ import secrets
 from pydantic_settings import BaseSettings
 
 DEFAULT_DB_PATH = os.path.abspath(os.path.join(os.path.dirname(os.path.dirname(__file__)), "securexerox.db")).replace("\\", "/")
+
 class Settings(BaseSettings):
     APP_ENV: str = os.getenv("APP_ENV", "development")
     SECRET_KEY: str = os.getenv("SECRET_KEY", secrets.token_urlsafe(48))
@@ -24,10 +25,15 @@ class Settings(BaseSettings):
     PRINT_ID_EXPIRY_MINUTES: int = int(os.getenv("PRINT_ID_EXPIRY_MINUTES", "10"))
     SESSION_TIMEOUT_MINUTES: int = int(os.getenv("SESSION_TIMEOUT_MINUTES", "5"))
 
+    # Centralized Authentication & OAuth Secrets
+    SUPABASE_URL: str = os.getenv("SUPABASE_URL", "https://wxucnfaeznejprxldcdf.supabase.co")
+    SUPABASE_ANON_KEY: str | None = os.getenv("SUPABASE_ANON_KEY")
+    SUPABASE_SERVICE_ROLE_KEY: str | None = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+
     def model_post_init(self, __context):
         if self.APP_ENV.lower() == "production":
             if not os.getenv("SECRET_KEY") or not self.ENCRYPTION_KEY:
-                raise RuntimeError("SECRET_KEY and ENCRYPTION_KEY must be set in production")
+                raise RuntimeError("SECRET_KEY and ENCRYPTION_KEY must be set in production via secure environment variables")
             if self.DATABASE_URL.startswith("sqlite"):
                 raise RuntimeError("Production requires a managed PostgreSQL DATABASE_URL")
             if "sslmode=require" not in self.DATABASE_URL.lower() and "sslmode=verify" not in self.DATABASE_URL.lower():

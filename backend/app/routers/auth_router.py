@@ -110,8 +110,8 @@ def google_auth(auth_data: GoogleAuthRequest, request: Request, db: Session = De
     raw_token = auth_data.token or auth_data.access_token
     if raw_token:
         # 1. Attempt verification via Supabase Auth user endpoint with proper headers
-        supabase_url = os.getenv("SUPABASE_URL", "https://wxucnfaeznejprxldcdf.supabase.co").rstrip("/")
-        anon_key = os.getenv("SUPABASE_ANON_KEY") or os.getenv("SUPABASE_KEY") or os.getenv("SUPABASE_SERVICE_ROLE_KEY") or ""
+        supabase_url = settings.SUPABASE_URL.rstrip("/")
+        anon_key = settings.SUPABASE_ANON_KEY or settings.SUPABASE_SERVICE_ROLE_KEY or ""
         try:
             req_headers = {
                 "Authorization": f"Bearer {raw_token}",
