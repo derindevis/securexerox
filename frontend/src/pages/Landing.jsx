@@ -170,24 +170,6 @@ export default function Landing() {
                   </a>
                 </div>
               </FadeInItem>
-
-              {/* Metric Strip */}
-              <FadeInItem>
-                <div className="grid grid-cols-3 gap-2 pt-6 border-t border-[var(--line)] font-mono text-center">
-                  <div className="p-3 rounded-xl bg-white border border-[var(--line)] hover:border-[var(--line-strong)] transition-colors cursor-default">
-                    <div className="text-base font-bold text-[var(--ink)]">0 Bytes</div>
-                    <div className="text-[10px] text-[var(--ink-secondary)] mt-0.5 uppercase tracking-wider">Disk Storage</div>
-                  </div>
-                  <div className="p-3 rounded-xl bg-white border border-[var(--line)] hover:border-[var(--emerald-soft)] transition-colors cursor-default">
-                    <div className="text-base font-bold text-[var(--emerald)]">10 Min</div>
-                    <div className="text-[10px] text-[var(--ink-secondary)] mt-0.5 uppercase tracking-wider">Access Window</div>
-                  </div>
-                  <div className="p-3 rounded-xl bg-white border border-[var(--line)] hover:border-[var(--line-strong)] transition-colors cursor-default">
-                    <div className="text-base font-bold text-[var(--ink)]">AES-256</div>
-                    <div className="text-[10px] text-[var(--ink-secondary)] mt-0.5 uppercase tracking-wider">Client Encrypted</div>
-                  </div>
-                </div>
-              </FadeInItem>
             </FadeInStagger>
 
             {/* Right: Live Interactive Counter Handoff Simulator */}
@@ -363,8 +345,27 @@ export default function Landing() {
                 </div>
               </motion.div>
             </div>
-
           </section>
+
+          {/* Metric Strip (Moved below Hero) */}
+          <FadeInStagger className="max-w-4xl mx-auto">
+            <FadeInItem>
+              <div className="grid grid-cols-3 gap-4 font-mono text-center pb-4">
+                <div className="p-4 rounded-xl bg-white border border-[var(--line)] shadow-sm hover:shadow-md transition-shadow cursor-default">
+                  <div className="text-xl md:text-2xl font-bold text-[var(--ink)]">0 Bytes</div>
+                  <div className="text-[10px] md:text-xs text-[var(--ink-secondary)] mt-1 uppercase tracking-widest">Disk Storage</div>
+                </div>
+                <div className="p-4 rounded-xl bg-white border border-[var(--line)] shadow-sm hover:shadow-md transition-shadow cursor-default">
+                  <div className="text-xl md:text-2xl font-bold text-[var(--emerald)]">10 Min</div>
+                  <div className="text-[10px] md:text-xs text-[var(--ink-secondary)] mt-1 uppercase tracking-widest">Access Window</div>
+                </div>
+                <div className="p-4 rounded-xl bg-white border border-[var(--line)] shadow-sm hover:shadow-md transition-shadow cursor-default">
+                  <div className="text-xl md:text-2xl font-bold text-[var(--ink)]">AES-256</div>
+                  <div className="text-[10px] md:text-xs text-[var(--ink-secondary)] mt-1 uppercase tracking-widest">Client Encrypted</div>
+                </div>
+              </div>
+            </FadeInItem>
+          </FadeInStagger>
 
           {/* ─── 2. TRUST MARQUEE ─── */}
           <section className="pt-4 border-t border-[var(--line)]">
@@ -393,9 +394,6 @@ export default function Landing() {
           <section id="how" className="space-y-10 lg:space-y-12">
             <FadeInStagger className="max-w-xl text-center md:text-left mx-auto md:mx-0">
               <FadeInItem>
-                <span className="sx-kicker mb-3 block">Cryptographic Protocol</span>
-              </FadeInItem>
-              <FadeInItem>
                 <h2 className="sx-title text-3xl md:text-4xl font-normal text-[var(--ink)] mb-4 leading-tight">
                   The Zero-Trust Architecture
                 </h2>
@@ -414,15 +412,29 @@ export default function Landing() {
                 whileHover={{ scale: 0.98 }}
                 className="md:col-span-2 md:row-span-2 rounded-[2rem] bg-white border border-[var(--line)] shadow-sm p-8 md:p-12 relative overflow-hidden flex flex-col justify-end group cursor-default transition-all hover:border-[var(--line-strong)] hover:shadow-md"
               >
-                <div className="absolute top-0 right-0 p-8 text-[var(--line)] group-hover:text-[var(--sage)] transition-colors">
+                {/* Background visual asset satisfying "no pure-text minimalism" */}
+                <div 
+                  className="absolute inset-0 z-0 opacity-40 group-hover:opacity-60 transition-opacity mix-blend-multiply pointer-events-none"
+                  style={{
+                    backgroundImage: "url('/crypto_vault_texture.jpg')",
+                    backgroundSize: "cover",
+                    backgroundPosition: "center"
+                  }}
+                />
+                
+                {/* Fade overlay so text remains perfectly readable */}
+                <div className="absolute inset-0 bg-gradient-to-t from-white via-white/80 to-transparent z-[5]" />
+                
+                <div className="absolute top-0 right-0 p-8 text-[var(--line)] group-hover:text-[var(--sage)] transition-colors z-[6]">
                   <Lock size={140} strokeWidth={1} />
                 </div>
-                <div className="relative z-10 space-y-4 max-w-md">
-                  <div className="w-12 h-12 rounded-2xl bg-[var(--sage)] text-[var(--ink)] flex items-center justify-center border border-[var(--line)]">
+                
+                <div className="relative z-10 space-y-4 max-w-md pt-40">
+                  <div className="w-12 h-12 rounded-2xl bg-[var(--sage)] text-[var(--ink)] flex items-center justify-center border border-[var(--line)] shadow-sm">
                     <Lock size={22} />
                   </div>
                   <h3 className="text-2xl font-semibold text-[var(--ink)] tracking-tight">End-to-End Encryption</h3>
-                  <p className="text-[var(--ink-secondary)] text-sm leading-relaxed">
+                  <p className="text-[var(--ink-secondary)] text-sm leading-relaxed font-medium">
                     Documents are encrypted in your browser using AES-GCM-256 before upload. The decryption key never leaves your device until handed directly to the kiosk via the 6-digit Print ID.
                   </p>
                 </div>
@@ -467,17 +479,18 @@ export default function Landing() {
           <section className="py-20 relative rounded-[3rem] overflow-hidden bg-[var(--ink)] text-center px-6 shadow-xl">
             <div className="absolute inset-0 bg-gradient-to-t from-[var(--emerald)]/20 to-transparent pointer-events-none opacity-50" />
             <div className="relative z-10 max-w-2xl mx-auto space-y-8">
-              <h2 className="sx-title text-4xl md:text-5xl font-normal tracking-tight text-white">
+              {/* Removed sx-title to avoid color: var(--ink) override, applied text-white explicitly */}
+              <h2 className="text-4xl md:text-5xl font-serif text-white font-normal tracking-tight leading-tight">
                 Ready to secure your documents?
               </h2>
-              <p className="text-zinc-300 text-[15px] max-w-[50ch] mx-auto">
+              <p className="text-white/70 text-[15px] max-w-[50ch] mx-auto leading-relaxed">
                 Stop emailing sensitive tax forms to `printshop123@gmail.com`. Use SecureXerox for zero-trace local printing.
               </p>
               <Link 
                 to="/login" 
                 className="inline-flex items-center gap-2 px-8 py-4 bg-white hover:bg-zinc-100 text-[var(--ink)] font-bold rounded-full transition-transform active:scale-[0.95]"
               >
-                <span>Get Started Free</span>
+                <span>Create Print Pass</span>
               </Link>
             </div>
           </section>
