@@ -104,16 +104,26 @@ async def create_job(
         except Exception:
             parsed_configs = []
 
-    # Validate target shop if specified
-    target_shop_id = None
-    if shopPublicId:
-        clean_shop_id = shopPublicId.strip().upper()
-        target_shop = db.query(User).filter(
-            (User.shop_public_id == clean_shop_id) | (User.id == shopPublicId),
-            User.role == "shop"
-        ).first()
-        if target_shop:
-            target_shop_id = target_shop.id
+    # Validate destination shop (MANDATORY)
+    if not shopPublicId or not shopPublicId.strip():
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="A verified destination print shop is required. Please scan the shop QR or select a shop counter."
+        )
+
+    clean_shop_id = shopPublicId.strip().upper()
+    target_shop = db.query(User).filter(
+        (User.shop_public_id == clean_shop_id) | (User.id == shopPublicId),
+        User.role == "shop"
+    ).first()
+
+    if not target_shop:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Print shop '{shopPublicId}' is not registered or active."
+        )
+
+    target_shop_id = target_shop.id
 
     # Generate unique 6-character Print ID
     print_id = generate_print_id()

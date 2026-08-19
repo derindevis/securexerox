@@ -12,9 +12,15 @@ class Settings(BaseSettings):
     DATABASE_URL: str = os.getenv("DATABASE_URL", f"sqlite:///{DEFAULT_DB_PATH}")
     UPLOAD_DIR: str = os.getenv("UPLOAD_DIR", os.path.join(os.path.dirname(os.path.dirname(__file__)), "uploads"))
     MAX_FILE_SIZE: int = int(os.getenv("MAX_FILE_SIZE", str(10 * 1024 * 1024)))
-    ALLOWED_ORIGINS: str = os.getenv("ALLOWED_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173")
-    TRUSTED_HOSTS: str = os.getenv("TRUSTED_HOSTS", "localhost,127.0.0.1")
-    FRONTEND_URL: str = os.getenv("FRONTEND_URL", "http://localhost:5173")
+    ALLOWED_ORIGINS: str = os.getenv(
+        "ALLOWED_ORIGINS",
+        "https://securexerox-fhqr.vercel.app,http://localhost:5173,http://localhost:3000,http://127.0.0.1:5173,https://securexerox.onrender.com"
+    )
+    TRUSTED_HOSTS: str = os.getenv(
+        "TRUSTED_HOSTS",
+        "securexerox.onrender.com,*.onrender.com,securexerox-fhqr.vercel.app,*.vercel.app,localhost,127.0.0.1,testserver"
+    )
+    FRONTEND_URL: str = os.getenv("FRONTEND_URL", "https://securexerox-fhqr.vercel.app")
     PRINT_ID_EXPIRY_MINUTES: int = int(os.getenv("PRINT_ID_EXPIRY_MINUTES", "10"))
     SESSION_TIMEOUT_MINUTES: int = int(os.getenv("SESSION_TIMEOUT_MINUTES", "5"))
 

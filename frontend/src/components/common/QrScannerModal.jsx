@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { Html5Qrcode } from 'html5-qrcode';
-import { X, Camera, RefreshCw, AlertCircle, Sparkles, CheckCircle2 } from 'lucide-react';
+import { X, Camera, RefreshCw, AlertCircle, Sparkles, CheckCircle2, Search } from 'lucide-react';
 import Modal from './Modal';
 
-export default function QrScannerModal({ isOpen, onClose, onScanSuccess }) {
+export default function QrScannerModal({ isOpen, onClose, onScanSuccess, onManualEntryClick }) {
   const [cameraError, setCameraError] = useState(null);
   const [cameras, setCameras] = useState([]);
   const [selectedCameraId, setSelectedCameraId] = useState(null);
@@ -106,17 +106,17 @@ export default function QrScannerModal({ isOpen, onClose, onScanSuccess }) {
       } catch (err) {
         console.error('Camera QR scanner init error:', err);
         if (isMounted) {
+          const isPerm = err?.name === 'NotAllowedError' || String(err).includes('Permission');
           setCameraError(
-            err?.name === 'NotAllowedError'
-              ? 'Camera access denied. Please grant camera permission in your browser.'
-              : 'Unable to start camera viewfinder.'
+            isPerm
+              ? 'Camera permission was denied or dismissed. Please allow camera access in your browser or enter the Shop ID manually.'
+              : 'Unable to start camera viewfinder on this device.'
           );
         }
       }
     }
 
     if (isOpen) {
-      // Allow DOM element to mount
       const timer = setTimeout(initScanner, 150);
       return () => {
         isMounted = false;
@@ -193,25 +193,33 @@ export default function QrScannerModal({ isOpen, onClose, onScanSuccess }) {
             </div>
           )}
 
-          {/* Error Message */}
+          {/* Error Message & Graceful Fallback */}
           {cameraError && (
             <div className="absolute inset-0 bg-[var(--canvas)] p-6 flex flex-col items-center justify-center text-center">
               <div className="w-12 h-12 rounded-full bg-[var(--danger-soft)] text-[var(--danger)] flex items-center justify-center mb-3">
                 <AlertCircle size={24} />
               </div>
-              <p className="text-sm font-semibold text-[var(--ink)] mb-1">Camera Unavailable</p>
-              <p className="text-xs text-[var(--ink-muted)] mb-4">{cameraError}</p>
-              <p className="text-xs text-[var(--ink-muted)]">
-                You can manually type the 6-character Shop ID on the upload screen.
-              </p>
+              <p className="text-sm font-semibold text-[var(--ink)] mb-1">Camera Access Required</p>
+              <p className="text-xs text-[var(--ink-muted)] leading-relaxed mb-5">{cameraError}</p>
+              
+              <button
+                type="button"
+                onClick={() => {
+                  onClose();
+                  if (onManualEntryClick) onManualEntryClick();
+                }}
+                className="sx-button text-xs py-2 px-4 justify-center cursor-pointer shadow-sm"
+              >
+                <Search size={13} /> Enter Shop ID Manually
+              </button>
             </div>
           )}
         </div>
 
         {/* Action Controls */}
         <div className="mt-4 flex items-center justify-between w-full text-xs text-[var(--ink-muted)] px-1">
-          <span>Align the shop's printed counter standee QR code inside the box.</span>
-          {cameras.length > 1 && (
+          <span>Align the shop's counter standee QR code inside the box.</span>
+          {cameras.length > 1 && !cameraError && (
             <button
               type="button"
               onClick={handleSwitchCamera}

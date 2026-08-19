@@ -83,9 +83,6 @@ class PrintSession(Base):
     
     started_at = Column(DateTime, default=datetime.utcnow)
     ended_at = Column(DateTime, nullable=True)
-    violations = Column(Integer, default=0)
-    is_locked = Column(Boolean, default=False)
-    security_events = Column(JSON, default=list)
 
     job = relationship("PrintJob", back_populates="sessions")
 

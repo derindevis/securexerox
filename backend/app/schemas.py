@@ -206,26 +206,12 @@ class ShopPublicInfoResponse(BaseModel):
     supportedPaperSizes: List[str] = ["A4", "A3", "Letter", "Legal"]
 
 # Session Schemas
-class ViolationRequest(BaseModel):
-    type: str
-
-    @field_validator("type")
-    @classmethod
-    def validate_violation_type(cls, v: str) -> str:
-        allowed = {"SCREENSHOT_ATTEMPT", "WINDOW_BLUR", "DEVTOOLS_OPEN", "PRINTER_MANIPULATION"}
-        if v not in allowed:
-            raise ValueError("Invalid security violation type")
-        return v
-
 class PrintSessionResponse(BaseModel):
     id: str
     jobId: str
     shopUserId: str
     startedAt: datetime
     endedAt: Optional[datetime] = None
-    violations: int
-    isLocked: bool
-    securityEvents: List[Any] = []
 
     class Config:
         from_attributes = True

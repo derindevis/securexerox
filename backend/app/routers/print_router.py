@@ -5,8 +5,8 @@ from fastapi import APIRouter, Depends, HTTPException, Response, status, Request
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models import User, PrintJob, PrintSession, ShopPrinter
-from app.schemas import PrintJobResponse, PrintSessionResponse, ViolationRequest
 from app.dependencies import get_current_user, require_role
+from app.schemas import PrintJobResponse, PrintSessionResponse, PrintDocumentResponse
 from app.storage import delete_job_file, read_decrypted_file
 from app.config import settings
 from app.rate_limiter import check_verify_rate_limit, get_client_ip
@@ -20,14 +20,16 @@ def get_shop_session(db: Session, job: PrintJob, shop_user_id: str) -> PrintSess
         PrintSession.shop_user_id == shop_user_id,
         PrintSession.ended_at.is_(None),
     ).order_by(PrintSession.started_at.desc()).first()
-    if not session or session.is_locked:
+    if not session:
         raise HTTPException(status_code=403, detail="An active session owned by this shop is required")
     if session.started_at + timedelta(minutes=settings.SESSION_TIMEOUT_MINUTES) <= datetime.utcnow():
         session.ended_at = datetime.utcnow()
         job.status = "EXPIRED"
         db.commit()
         raise HTTPException(status_code=410, detail="The secure print session has expired")
-from app.schemas import PrintJobResponse, PrintDocumentResponse, PrintSessionResponse, ViolationRequest
+    return session
+
+from app.schemas import PrintJobResponse, PrintDocumentResponse, PrintSessionResponse
 
 def to_job_response(job: PrintJob) -> PrintJobResponse:
     docs = []
@@ -180,56 +182,6 @@ def start_session(
 from app.logger import log_audit_event
 from app.rate_limiter import get_client_ip
 
-@router.post("/session/violation/{job_id}")
-def record_violation(
-    job_id: str,
-    violation: ViolationRequest,
-    request: Request,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(require_role("shop")),
-):
-    validate_uuid_format(job_id)
-    client_ip = get_client_ip(request)
-    job = db.query(PrintJob).filter(PrintJob.id == job_id).first()
-    if not job:
-        raise HTTPException(status_code=404, detail="Job not found")
-
-    # Enforce session ownership BEFORE mutating job state
-    session = get_shop_session(db, job, current_user.id)
-
-    job.violations += 1
-    session.violations += 1
-    events = list(session.security_events or [])
-    events.append({
-        "type": violation.type,
-        "timestamp": datetime.utcnow().isoformat(),
-        "violationNumber": session.violations,
-    })
-    session.security_events = events
-
-    log_audit_event(
-        "SECURITY_VIOLATION",
-        f"Security violation recorded during print session (type: {violation.type}, count: {session.violations})",
-        ip_address=client_ip,
-        user_id=current_user.id,
-        detail=f"job_id={job.id}"
-    )
-
-    if session.violations >= 3:
-        session.is_locked = True
-        job.status = "SESSION_LOCKED"
-        log_audit_event(
-            "SESSION_LOCKOUT",
-            f"Print session locked out due to threshold violations (job_id: {job.id})",
-            ip_address=client_ip,
-            user_id=current_user.id,
-            status_code=403,
-            detail=f"job_id={job.id}"
-        )
-
-    db.commit()
-    return {"violations": job.violations, "isLocked": job.status == "SESSION_LOCKED"}
-
 @router.post("/execute/{job_id}", response_model=PrintJobResponse)
 def execute_print(
     job_id: str,
@@ -243,9 +195,18 @@ def execute_print(
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
 
-    session = get_shop_session(db, job, current_user.id)
-    if job.status not in ["SECURE_SESSION", "WAITING"]:
-        raise HTTPException(status_code=409, detail="Document is not in an active secure session")
+    if job.status in ["DESTROYED", "EXPIRED", "COMPLETED", "ACCESS_REVOKED"]:
+        raise HTTPException(status_code=400, detail=f"Job cannot be printed in state: {job.status}")
+
+    # Ensure job is locked to this shop
+    if job.shop_id and job.shop_id != current_user.id:
+        raise HTTPException(status_code=403, detail="This print job is addressed to a different shop counter")
+
+    session = db.query(PrintSession).filter(
+        PrintSession.job_id == job.id,
+        PrintSession.shop_user_id == current_user.id,
+        PrintSession.ended_at.is_(None),
+    ).order_by(PrintSession.started_at.desc()).first()
 
     # 1. Match registered printer for shop
     printers = db.query(ShopPrinter).filter(ShopPrinter.shop_user_id == current_user.id).all()
