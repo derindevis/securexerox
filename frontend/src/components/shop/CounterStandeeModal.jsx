@@ -1,6 +1,6 @@
 import { useRef } from 'react';
-import { QRCodeSVG } from 'qrcode.react';
-import { ShieldCheck, Printer } from 'lucide-react';
+import { QRCodeCanvas } from 'qrcode.react';
+import { ShieldCheck, Printer, Download } from 'lucide-react';
 import Modal from '../common/Modal';
 
 export default function CounterStandeeModal({ isOpen, onClose, shopUser }) {
@@ -13,6 +13,30 @@ export default function CounterStandeeModal({ isOpen, onClose, shopUser }) {
 
   const handlePrint = () => {
     window.print();
+  };
+
+  const handleDownloadQr = () => {
+    const canvas = document.getElementById('shop-qr-canvas');
+    if (!canvas) return;
+    
+    // Create a temporary canvas to add some white padding around the QR code
+    const padding = 20;
+    const tempCanvas = document.createElement('canvas');
+    tempCanvas.width = canvas.width + (padding * 2);
+    tempCanvas.height = canvas.height + (padding * 2);
+    const ctx = tempCanvas.getContext('2d');
+    
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
+    ctx.drawImage(canvas, padding, padding);
+
+    const pngUrl = tempCanvas.toDataURL('image/png');
+    const downloadLink = document.createElement('a');
+    downloadLink.href = pngUrl;
+    downloadLink.download = `${shopPublicId}-QR.png`;
+    document.body.appendChild(downloadLink);
+    downloadLink.click();
+    document.body.removeChild(downloadLink);
   };
 
   return (
@@ -40,7 +64,8 @@ export default function CounterStandeeModal({ isOpen, onClose, shopUser }) {
 
           {/* QR Code Container */}
           <div className="p-3 bg-white rounded-xl border border-[var(--line)] shadow-inner mb-3 flex flex-col items-center">
-            <QRCodeSVG
+            <QRCodeCanvas
+              id="shop-qr-canvas"
               value={qrUrl}
               size={135}
               level="H"
@@ -75,7 +100,7 @@ export default function CounterStandeeModal({ isOpen, onClose, shopUser }) {
             <div className="p-2 rounded-lg bg-[var(--surface-muted)] flex flex-col gap-0.5">
               <span className="w-4 h-4 rounded-full bg-[var(--ink)] text-[var(--surface)] text-[9px] font-bold flex items-center justify-center">3</span>
               <p className="text-[10px] font-bold text-[var(--ink)]">Show PIN</p>
-              <p className="text-[9px] text-[var(--ink-muted)] leading-tight">Give 6-digit code to cashier.</p>
+              <p className="text-[9px] text-[var(--ink-muted)] leading-tight">Wait for tracking status.</p>
             </div>
           </div>
 
@@ -86,16 +111,20 @@ export default function CounterStandeeModal({ isOpen, onClose, shopUser }) {
         </div>
 
         {/* Action Controls */}
-        <div className="flex items-center justify-between pt-1">
-          <p className="text-[11px] text-[var(--ink-muted)]">
-            Display at counter for 1-tap uploads.
-          </p>
+        <div className="flex flex-col md:flex-row items-center justify-between pt-1 gap-3">
+          <button
+            type="button"
+            onClick={handleDownloadQr}
+            className="w-full md:w-auto inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border border-[var(--line)] bg-[var(--surface-muted)] hover:bg-[var(--line)] text-[var(--ink)] text-xs font-semibold transition-colors cursor-pointer"
+          >
+            <Download size={14} /> Download Image
+          </button>
           <button
             type="button"
             onClick={handlePrint}
-            className="sx-button justify-center gap-1.5 text-xs py-2 px-4 cursor-pointer"
+            className="sx-button justify-center gap-1.5 text-xs py-2 px-4 cursor-pointer w-full md:w-auto"
           >
-            <Printer size={14} /> Print Desk Standee
+            <Printer size={14} /> Print Standee
           </button>
         </div>
 
