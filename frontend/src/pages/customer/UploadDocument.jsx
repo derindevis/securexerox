@@ -2,11 +2,10 @@ import { useRef, useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   FileUp, Minus, Plus, X, ShieldCheck, Store, Globe,
-  AlertCircle, Search, Camera, Copy, Trash2, Layers, ChevronDown, ChevronUp, Lock
+  AlertCircle, Search, Copy, Trash2, Layers, ChevronDown, ChevronUp, Lock, CheckCircle2
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import PageTransition from '../../components/common/PageTransition';
-import QrScannerModal from '../../components/common/QrScannerModal';
 import { api } from '../../utils/api';
 import { PAPER_SIZES, COLOR_MODES, ORIENTATIONS, formatFileSize } from '../../utils/constants';
 
@@ -26,14 +25,14 @@ export default function UploadDocument() {
   const [manualShopInput, setManualShopInput] = useState('');
   const [isChangingShop, setIsChangingShop] = useState(false);
   const [publicShops, setPublicShops] = useState([]);
-  const [isQrModalOpen, setIsQrModalOpen] = useState(false);
+  const [searchFilter, setSearchFilter] = useState('');
 
   const fileInputRef = useRef();
   const manualInputRef = useRef();
   const nav = useNavigate();
   const { createJob, addToast } = useApp();
 
-  // Load shop information if shop query parameter is present
+  // Load shop information if shop query parameter is present (e.g. from Standee QR scan)
   useEffect(() => {
     async function loadShopInfo(idToLookup) {
       if (!idToLookup) {
@@ -52,7 +51,7 @@ export default function UploadDocument() {
         }
       } catch (err) {
         console.error('Failed to load shop info:', err);
-        setShopError(`Shop '${idToLookup}' not found. You can still upload in Universal mode or re-scan.`);
+        setShopError(`Shop '${idToLookup}' not found. Defaulting to Universal Mode.`);
         setTargetShop(null);
       } finally {
         setLoadingShop(false);
@@ -79,13 +78,14 @@ export default function UploadDocument() {
     loadPublicShops();
   }, []);
 
-  const handleApplyManualShop = (shopIdToApply) => {
+  const handleApplyShop = (shopIdToApply) => {
     const clean = shopIdToApply.trim().toUpperCase();
     if (!clean) {
-      addToast('Please enter a valid Shop ID (e.g. SX-SHOP-0042)', 'warning');
+      addToast('Please enter a valid Shop ID (e.g. SX-SHOP-387B)', 'warning');
       return;
     }
     setSearchParams({ shop: clean });
+    setIsChangingShop(false);
   };
 
   const handleClearShop = () => {
@@ -93,13 +93,6 @@ export default function UploadDocument() {
     setTargetShop(null);
     setShopError(null);
     setIsChangingShop(false);
-  };
-
-  const handleScanSuccess = (scannedShopId) => {
-    if (scannedShopId) {
-      setSearchParams({ shop: scannedShopId });
-      addToast(`Connected to Shop '${scannedShopId}'`, 'success');
-    }
   };
 
   // Add files to documents state (Always unlocked)
@@ -194,6 +187,11 @@ export default function UploadDocument() {
     }
   };
 
+  const filteredShops = publicShops.filter(s => 
+    s.shopName.toLowerCase().includes(searchFilter.toLowerCase()) || 
+    s.shopPublicId.toLowerCase().includes(searchFilter.toLowerCase())
+  );
+
   const totalCopies = documents.reduce((sum, d) => sum + Number(d.copies || 1), 0);
   const colorCount = documents.filter(d => d.colorMode === 'Color').length;
 
@@ -212,21 +210,21 @@ export default function UploadDocument() {
               Encrypted print,<br /><em>zero residue.</em>
             </h1>
             <p className="sx-lede text-sm mt-1">
-              Upload your files, customize print specs, and release with a secure temporary PIN.
+              Upload documents, configure print specifications, and release with a secure temporary PIN.
             </p>
           </div>
 
-          {/* ── Destination Banner (Standee Connected OR Universal Mode) ── */}
+          {/* ── Destination Banner (Standee QR Connected OR Universal Mode) ── */}
           <section className="mb-6 p-4 md:p-5 rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-2xs">
             {targetShop ? (
-              /* Connected to Specific Counter Standee */
+              /* Connected to Specific Counter Standee (e.g. Scanned via Phone Camera) */
               <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                 <div className="flex items-center gap-3.5">
                   <div className="p-2.5 rounded-xl bg-[var(--emerald-soft)] text-[var(--emerald)] shrink-0 border border-[var(--emerald)]/20">
                     <Store size={22} />
                   </div>
                   <div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--emerald)] px-2 py-0.5 rounded-md bg-[var(--emerald-soft)] border border-[var(--emerald)]/20">
                         Counter Connected
                       </span>
@@ -238,9 +236,9 @@ export default function UploadDocument() {
                       </span>
                     </div>
                     <p className="text-xs text-[var(--ink-muted)] flex items-center gap-2 mt-0.5">
-                      <span className="text-[var(--emerald)] font-semibold">● Hardware Online</span>
+                      <span className="text-[var(--emerald)] font-semibold">● Direct to Counter Queue</span>
                       <span>•</span>
-                      <span>{targetShop.isColorCapable ? 'Color & B&W Supported' : 'B&W Only'}</span>
+                      <span>{targetShop.isColorCapable ? 'Color & B&W Spoolers Ready' : 'B&W Spooler Only'}</span>
                     </p>
                   </div>
                 </div>
@@ -251,13 +249,13 @@ export default function UploadDocument() {
                     onClick={() => setIsChangingShop(true)}
                     className="text-xs text-[var(--ink)] font-semibold hover:bg-[var(--surface-muted)] px-3 py-1.5 rounded-xl border border-[var(--line)] transition-colors cursor-pointer"
                   >
-                    Change
+                    Change Counter
                   </button>
                   <button
                     type="button"
                     onClick={handleClearShop}
                     className="text-xs text-[var(--danger)] hover:bg-[var(--danger-soft)] p-1.5 rounded-xl transition-colors cursor-pointer"
-                    title="Switch to Universal Mode (Any Shop)"
+                    title="Switch to Universal Mode (Any Counter)"
                   >
                     <X size={15} />
                   </button>
@@ -280,7 +278,7 @@ export default function UploadDocument() {
                       </strong>
                     </div>
                     <p className="text-xs text-[var(--ink-muted)] mt-0.5">
-                      Your Print ID can be redeemed at any registered SecureXerox counter.
+                      Your Print PIN can be redeemed at any registered SecureXerox shop counter.
                     </p>
                   </div>
                 </div>
@@ -288,17 +286,13 @@ export default function UploadDocument() {
                 <div className="flex items-center gap-2 w-full md:w-auto justify-end">
                   <button
                     type="button"
-                    onClick={() => setIsQrModalOpen(true)}
-                    className="sx-button text-xs py-1.5 px-3 cursor-pointer"
+                    onClick={() => {
+                      setIsChangingShop(true);
+                      setTimeout(() => manualInputRef.current?.focus(), 100);
+                    }}
+                    className="text-xs font-semibold text-[var(--ink)] px-3.5 py-1.5 rounded-xl border border-[var(--line)] hover:bg-[var(--surface-muted)] transition-colors cursor-pointer flex items-center gap-1.5"
                   >
-                    <Camera size={13} /> Scan Counter QR
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setIsChangingShop(true)}
-                    className="text-xs font-semibold text-[var(--ink)] px-3 py-1.5 rounded-xl border border-[var(--line)] hover:bg-[var(--surface-muted)] transition-colors cursor-pointer"
-                  >
-                    <Search size={13} className="inline mr-1" /> Pick Shop
+                    <Search size={13} /> Select Specific Counter
                   </button>
                 </div>
               </div>
@@ -312,28 +306,34 @@ export default function UploadDocument() {
               </div>
             )}
 
-            {/* Manual Shop Entry Drawer */}
+            {/* Shop Counter Selection Drawer */}
             {isChangingShop && (
-              <div className="mt-3 pt-3 border-t border-[var(--line)] flex flex-col gap-2.5 animate-in fade-in duration-150">
+              <div className="mt-3 pt-3 border-t border-[var(--line)] flex flex-col gap-3 animate-in fade-in duration-150">
                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
-                  <input
-                    ref={manualInputRef}
-                    type="text"
-                    placeholder="Enter Shop Code (e.g. SX-SHOP-387B)"
-                    value={manualShopInput}
-                    onChange={(e) => setManualShopInput(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') handleApplyManualShop(manualShopInput);
-                    }}
-                    className="w-full sm:w-80 p-2 text-xs rounded-xl border border-[var(--line)] bg-[var(--canvas)] font-mono uppercase"
-                  />
+                  <div className="relative flex-1 sm:w-80">
+                    <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--ink-muted)]" />
+                    <input
+                      ref={manualInputRef}
+                      type="text"
+                      placeholder="Search shop name or code (e.g. SX-SHOP-387B)"
+                      value={manualShopInput}
+                      onChange={(e) => {
+                        setManualShopInput(e.target.value);
+                        setSearchFilter(e.target.value);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') handleApplyShop(manualShopInput);
+                      }}
+                      className="w-full pl-9 pr-3 py-2 text-xs rounded-xl border border-[var(--line)] bg-[var(--canvas)] font-mono uppercase"
+                    />
+                  </div>
                   <div className="flex items-center gap-2">
                     <button
                       type="button"
-                      onClick={() => handleApplyManualShop(manualShopInput)}
+                      onClick={() => handleApplyShop(manualShopInput)}
                       className="sx-button text-xs py-2 px-3.5 justify-center flex-1 sm:flex-none cursor-pointer"
                     >
-                      Connect Shop
+                      Connect Counter
                     </button>
                     <button
                       type="button"
@@ -346,18 +346,22 @@ export default function UploadDocument() {
                 </div>
 
                 {publicShops.length > 0 && (
-                  <div className="flex flex-wrap items-center gap-1.5 text-xs text-[var(--ink-muted)] mt-1">
-                    <span>Quick Select:</span>
-                    {publicShops.map((s) => (
-                      <button
-                        key={s.id}
-                        type="button"
-                        onClick={() => handleApplyManualShop(s.shopPublicId)}
-                        className="px-2 py-0.5 rounded-lg bg-[var(--surface-muted)] hover:bg-[var(--line)] text-[var(--ink)] border border-[var(--line)] transition-colors cursor-pointer text-xs font-medium"
-                      >
-                        {s.shopName} ({s.shopPublicId})
-                      </button>
-                    ))}
+                  <div className="flex flex-col gap-1.5 mt-1">
+                    <span className="text-[11px] text-[var(--ink-muted)] font-semibold">Registered Counters:</span>
+                    <div className="flex flex-wrap items-center gap-1.5 max-h-32 overflow-y-auto">
+                      {filteredShops.map((s) => (
+                        <button
+                          key={s.id}
+                          type="button"
+                          onClick={() => handleApplyShop(s.shopPublicId)}
+                          className="px-2.5 py-1 rounded-lg bg-[var(--surface-muted)] hover:bg-[var(--line)] text-[var(--ink)] border border-[var(--line)] transition-colors cursor-pointer text-xs font-medium flex items-center gap-1.5"
+                        >
+                          <Store size={12} className="text-[var(--emerald)]" />
+                          <span>{s.shopName}</span>
+                          <span className="font-mono text-[10px] text-[var(--ink-muted)]">({s.shopPublicId})</span>
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>
@@ -601,17 +605,6 @@ export default function UploadDocument() {
 
         </div>
       </main>
-
-      {/* Camera QR Scanner Modal */}
-      <QrScannerModal
-        isOpen={isQrModalOpen}
-        onClose={() => setIsQrModalOpen(false)}
-        onScanSuccess={handleScanSuccess}
-        onManualEntryClick={() => {
-          setIsChangingShop(true);
-          setTimeout(() => manualInputRef.current?.focus(), 100);
-        }}
-      />
     </PageTransition>
   );
 }
