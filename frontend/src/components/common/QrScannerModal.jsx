@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Html5Qrcode } from 'html5-qrcode';
-import { X, Camera, RefreshCw, AlertCircle, CheckCircle2, Search } from 'lucide-react';
+import { X, Camera, RefreshCw, AlertCircle, CheckCircle2, Search, UploadCloud } from 'lucide-react';
 import Modal from './Modal';
 
 export default function QrScannerModal({ isOpen, onClose, onScanSuccess, onManualEntryClick }) {
@@ -9,7 +9,10 @@ export default function QrScannerModal({ isOpen, onClose, onScanSuccess, onManua
   const [selectedCameraId, setSelectedCameraId] = useState(null);
   const [isScanning, setIsScanning] = useState(false);
   const [scannedResult, setScannedResult] = useState(null);
+  const [isProcessingImage, setIsProcessingImage] = useState(false);
+  
   const scannerRef = useRef(null);
+  const fileInputRef = useRef(null);
   const qrRegionId = 'sx-qr-camera-region';
 
   // Helper to extract Shop ID from raw QR text or URL
@@ -17,7 +20,6 @@ export default function QrScannerModal({ isOpen, onClose, onScanSuccess, onManua
     if (!decodedText) return null;
     const text = decodedText.trim();
 
-    // Check URL query param e.g. ?shop=SX-SHOP-0042
     try {
       if (text.includes('shop=')) {
         const urlObj = new URL(text.startsWith('http') ? text : `http://dummy.com/${text}`);
@@ -28,13 +30,28 @@ export default function QrScannerModal({ isOpen, onClose, onScanSuccess, onManua
       // ignore URL parse errors
     }
 
-    // Check regex pattern SX-SHOP-XXXX or SX-XXXX
     const match = text.match(/SX-(?:SHOP-)?[A-Z0-9]{4,6}/i);
-    if (match) {
-      return match[0].toUpperCase();
-    }
+    if (match) return match[0].toUpperCase();
 
     return text.toUpperCase();
+  };
+
+  const handleSuccess = (decodedText, html5QrCode, isMounted) => {
+    const parsedShopId = extractShopId(decodedText);
+    if (parsedShopId && isMounted) {
+      setScannedResult(parsedShopId);
+      if (html5QrCode && html5QrCode.isScanning) {
+        html5QrCode.stop().then(() => {
+          if (isMounted) setIsScanning(false);
+        }).catch(() => {});
+      }
+      setTimeout(() => {
+        if (isMounted) {
+          onScanSuccess(parsedShopId);
+          onClose();
+        }
+      }, 600);
+    }
   };
 
   // Initialize scanner when modal opens
@@ -51,58 +68,37 @@ export default function QrScannerModal({ isOpen, onClose, onScanSuccess, onManua
         html5QrCode = new Html5Qrcode(qrRegionId);
         scannerRef.current = html5QrCode;
 
-        const qrConfig = {
-          fps: 10,
-          qrbox: { width: 250, height: 250 },
-          aspectRatio: 1.0,
-        };
+        const qrConfig = { fps: 10, qrbox: { width: 250, height: 250 }, aspectRatio: 1.0 };
+        const onScan = (decodedText) => handleSuccess(decodedText, html5QrCode, isMounted);
 
-        const onScan = (decodedText) => {
-          const parsedShopId = extractShopId(decodedText);
-          if (parsedShopId && isMounted) {
-            setScannedResult(parsedShopId);
-            html5QrCode.stop().then(() => {
-              if (isMounted) {
-                setIsScanning(false);
-                setTimeout(() => {
-                  onScanSuccess(parsedShopId);
-                  onClose();
-                }, 400);
-              }
-            }).catch(() => {
-              if (isMounted) {
-                onScanSuccess(parsedShopId);
-                onClose();
-              }
-            });
-          }
-        };
-
-        // Try direct environment (rear) camera first for instant mobile access
         try {
           await html5QrCode.start({ facingMode: "environment" }, qrConfig, onScan, () => {});
           if (isMounted) setIsScanning(true);
         } catch (facingErr) {
-          // Fallback to explicit camera list / default camera
-          const devices = await Html5Qrcode.getCameras();
-          if (!isMounted) return;
+          try {
+            await html5QrCode.start({ facingMode: "user" }, qrConfig, onScan, () => {});
+            if (isMounted) setIsScanning(true);
+          } catch (userErr) {
+            const devices = await Html5Qrcode.getCameras();
+            if (!isMounted) return;
 
-          if (!devices || devices.length === 0) {
-            setCameraError('No video cameras detected on this device.');
-            return;
+            if (!devices || devices.length === 0) {
+              setCameraError('No video cameras detected. You can take a photo of the QR instead.');
+              return;
+            }
+
+            setCameras(devices);
+            const backCamera = devices.find(d => 
+              d.label.toLowerCase().includes('back') || 
+              d.label.toLowerCase().includes('environment') ||
+              d.label.toLowerCase().includes('rear')
+            );
+            const cameraIdToUse = backCamera ? backCamera.id : devices[0].id;
+            setSelectedCameraId(cameraIdToUse);
+
+            await html5QrCode.start(cameraIdToUse, qrConfig, onScan, () => {});
+            if (isMounted) setIsScanning(true);
           }
-
-          setCameras(devices);
-          const backCamera = devices.find(d => 
-            d.label.toLowerCase().includes('back') || 
-            d.label.toLowerCase().includes('environment') ||
-            d.label.toLowerCase().includes('rear')
-          );
-          const cameraIdToUse = backCamera ? backCamera.id : devices[0].id;
-          setSelectedCameraId(cameraIdToUse);
-
-          await html5QrCode.start(cameraIdToUse, qrConfig, onScan, () => {});
-          if (isMounted) setIsScanning(true);
         }
       } catch (err) {
         console.error('Camera QR scanner init error:', err);
@@ -110,28 +106,32 @@ export default function QrScannerModal({ isOpen, onClose, onScanSuccess, onManua
           const isPerm = err?.name === 'NotAllowedError' || String(err).includes('Permission');
           setCameraError(
             isPerm
-              ? 'Camera permission was denied or dismissed. Please allow camera access in your browser or enter the Shop ID manually.'
-              : 'Unable to open camera viewfinder. Please verify device permissions or enter the Shop ID manually.'
+              ? 'Camera permission denied. Please allow access, or take a photo of the QR instead.'
+              : 'Unable to open camera viewfinder. You can take a photo of the QR instead.'
           );
         }
       }
     }
 
     if (isOpen) {
-      const timer = setTimeout(initScanner, 150);
+      const timer = setTimeout(initScanner, 250);
       return () => {
         isMounted = false;
         clearTimeout(timer);
         if (scannerRef.current) {
-          scannerRef.current.stop().catch(() => {}).then(() => {
+          if (scannerRef.current.isScanning) {
+            scannerRef.current.stop().catch(() => {}).then(() => {
+              scannerRef.current?.clear();
+            });
+          } else {
             scannerRef.current?.clear();
-          });
+          }
         }
       };
     }
   }, [isOpen, onScanSuccess, onClose]);
 
-  // Switch camera if multiple cameras are available
+  // Switch camera
   const handleSwitchCamera = async () => {
     if (!scannerRef.current) return;
     try {
@@ -142,7 +142,9 @@ export default function QrScannerModal({ isOpen, onClose, onScanSuccess, onManua
       }
       if (devList.length <= 1) return;
 
-      await scannerRef.current.stop();
+      if (scannerRef.current.isScanning) {
+        await scannerRef.current.stop();
+      }
       const nextIdx = (devList.findIndex(c => c.id === selectedCameraId) + 1) % devList.length;
       const nextCam = devList[nextIdx];
       setSelectedCameraId(nextCam.id);
@@ -150,18 +152,36 @@ export default function QrScannerModal({ isOpen, onClose, onScanSuccess, onManua
       await scannerRef.current.start(
         nextCam.id,
         { fps: 10, qrbox: { width: 250, height: 250 } },
-        (decodedText) => {
-          const parsedShopId = extractShopId(decodedText);
-          if (parsedShopId) {
-            scannerRef.current.stop().catch(() => {});
-            onScanSuccess(parsedShopId);
-            onClose();
-          }
-        },
+        (decodedText) => handleSuccess(decodedText, scannerRef.current, true),
         () => {}
       );
     } catch (e) {
       console.error('Error switching camera:', e);
+    }
+  };
+
+  // Fallback: Scan from image file (triggers native camera on mobile)
+  const handleImageUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsProcessingImage(true);
+    try {
+      if (!scannerRef.current) {
+        scannerRef.current = new Html5Qrcode(qrRegionId);
+      } else if (scannerRef.current.isScanning) {
+        await scannerRef.current.stop();
+        setIsScanning(false);
+      }
+
+      const decodedText = await scannerRef.current.scanFile(file, false);
+      handleSuccess(decodedText, scannerRef.current, true);
+    } catch (err) {
+      console.error('Error scanning image:', err);
+      alert('Could not find a valid QR code in the image. Please try again or enter the ID manually.');
+    } finally {
+      setIsProcessingImage(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
 
@@ -172,8 +192,10 @@ export default function QrScannerModal({ isOpen, onClose, onScanSuccess, onManua
       <div className="flex flex-col items-center">
 
         {/* Viewfinder container */}
-        <div className="relative w-full max-w-sm aspect-square rounded-2xl overflow-hidden bg-black/90 border-2 border-[var(--line)] flex items-center justify-center shadow-inner">
-          <div id={qrRegionId} className="w-full h-full" />
+        <div className="relative w-full max-w-sm aspect-square rounded-2xl overflow-hidden bg-black/90 border-2 border-[var(--line)] flex items-center justify-center shadow-inner mb-4">
+          
+          {/* We must ensure the div is always present for html5-qrcode to bind to it */}
+          <div id={qrRegionId} className="w-full h-full" style={{ display: cameraError && !isScanning ? 'none' : 'block' }} />
 
           {/* Scanner Reticle Overlay */}
           {isScanning && !scannedResult && !cameraError && (
@@ -188,9 +210,17 @@ export default function QrScannerModal({ isOpen, onClose, onScanSuccess, onManua
             </div>
           )}
 
+          {/* Processing Image Loader */}
+          {isProcessingImage && (
+            <div className="absolute inset-0 bg-black/80 backdrop-blur-sm flex flex-col items-center justify-center text-white z-10">
+              <div className="w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mb-3"></div>
+              <p className="text-sm font-semibold">Scanning image...</p>
+            </div>
+          )}
+
           {/* Success Flash */}
           {scannedResult && (
-            <div className="absolute inset-0 bg-emerald-950/80 backdrop-blur-xs flex flex-col items-center justify-center p-4 text-center text-white animate-in fade-in zoom-in duration-200">
+            <div className="absolute inset-0 bg-emerald-950/90 backdrop-blur-sm flex flex-col items-center justify-center p-4 text-center text-white animate-in fade-in zoom-in duration-200 z-20">
               <div className="w-14 h-14 rounded-full bg-emerald-500 text-white flex items-center justify-center mb-3 shadow-lg">
                 <CheckCircle2 size={32} />
               </div>
@@ -202,8 +232,8 @@ export default function QrScannerModal({ isOpen, onClose, onScanSuccess, onManua
           )}
 
           {/* Error Message & Graceful Fallback */}
-          {cameraError && (
-            <div className="absolute inset-0 bg-[var(--canvas)] p-6 flex flex-col items-center justify-center text-center">
+          {cameraError && !scannedResult && !isProcessingImage && (
+            <div className="absolute inset-0 bg-[var(--canvas)] p-6 flex flex-col items-center justify-center text-center z-10">
               <div className="w-12 h-12 rounded-full bg-[var(--danger-soft)] text-[var(--danger)] flex items-center justify-center mb-3">
                 <AlertCircle size={24} />
               </div>
@@ -212,30 +242,59 @@ export default function QrScannerModal({ isOpen, onClose, onScanSuccess, onManua
               
               <button
                 type="button"
-                onClick={() => {
-                  onClose();
-                  if (onManualEntryClick) onManualEntryClick();
-                }}
-                className="sx-button text-xs py-2 px-4 justify-center cursor-pointer shadow-sm"
+                onClick={() => fileInputRef.current?.click()}
+                className="sx-button text-xs py-2 px-4 justify-center cursor-pointer shadow-sm bg-[var(--emerald)] text-white hover:bg-[var(--emerald)]"
               >
-                <Search size={13} /> Enter Shop ID Manually
+                <Camera size={13} className="text-white" /> Take Photo of QR
               </button>
             </div>
           )}
         </div>
 
+        {/* Hidden File Input for Native Camera/Image Scan Fallback */}
+        <input 
+          type="file" 
+          accept="image/*" 
+          capture="environment" 
+          ref={fileInputRef}
+          onChange={handleImageUpload}
+          className="hidden" 
+        />
+
         {/* Action Controls */}
-        <div className="mt-4 flex items-center justify-between w-full text-xs text-[var(--ink-muted)] px-1">
-          <span>Align the shop's counter standee QR code inside the box.</span>
-          {cameras.length > 1 && !cameraError && (
+        <div className="flex flex-col sm:flex-row items-center justify-between w-full gap-3">
+          
+          <div className="flex items-center gap-2 w-full sm:w-auto">
             <button
               type="button"
-              onClick={handleSwitchCamera}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[var(--line)] hover:bg-[var(--surface)] text-[var(--ink)] font-semibold transition-colors cursor-pointer shrink-0 ml-3"
+              onClick={() => fileInputRef.current?.click()}
+              className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border border-[var(--line)] bg-[var(--surface-muted)] hover:bg-[var(--line)] text-[var(--ink)] text-xs font-semibold transition-colors cursor-pointer"
             >
-              <RefreshCw size={13} /> Switch Camera
+              <UploadCloud size={14} /> Upload QR Image
             </button>
-          )}
+
+            {cameras.length > 1 && !cameraError && (
+              <button
+                type="button"
+                onClick={handleSwitchCamera}
+                className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border border-[var(--line)] hover:bg-[var(--surface)] text-[var(--ink)] text-xs font-semibold transition-colors cursor-pointer"
+              >
+                <RefreshCw size={14} /> Switch
+              </button>
+            )}
+          </div>
+
+          <button
+            type="button"
+            onClick={() => {
+              onClose();
+              if (onManualEntryClick) onManualEntryClick();
+            }}
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border border-[var(--line)] text-[var(--ink)] text-xs font-semibold hover:bg-[var(--surface-muted)] transition-colors cursor-pointer"
+          >
+            <Search size={14} /> Enter ID Manually
+          </button>
+          
         </div>
 
       </div>

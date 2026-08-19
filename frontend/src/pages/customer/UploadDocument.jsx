@@ -2,10 +2,11 @@ import { useRef, useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   FileUp, Minus, Plus, X, ShieldCheck, Store, Globe,
-  AlertCircle, Search, Copy, Trash2, Layers, ChevronDown, ChevronUp, Lock, CheckCircle2
+  AlertCircle, Search, Copy, Trash2, Layers, ChevronDown, ChevronUp, Lock, CheckCircle2, Camera
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import PageTransition from '../../components/common/PageTransition';
+import QrScannerModal from '../../components/common/QrScannerModal';
 import { api } from '../../utils/api';
 import { PAPER_SIZES, COLOR_MODES, ORIENTATIONS, formatFileSize } from '../../utils/constants';
 
@@ -26,6 +27,7 @@ export default function UploadDocument() {
   const [isChangingShop, setIsChangingShop] = useState(false);
   const [publicShops, setPublicShops] = useState([]);
   const [searchFilter, setSearchFilter] = useState('');
+  const [isQrModalOpen, setIsQrModalOpen] = useState(false);
 
   const fileInputRef = useRef();
   const manualInputRef = useRef();
@@ -286,13 +288,20 @@ export default function UploadDocument() {
                 <div className="flex items-center gap-2 w-full md:w-auto justify-end">
                   <button
                     type="button"
+                    onClick={() => setIsQrModalOpen(true)}
+                    className="text-xs font-semibold text-[var(--ink)] px-3.5 py-1.5 rounded-xl border border-[var(--line)] bg-[var(--surface)] hover:bg-[var(--surface-muted)] transition-colors cursor-pointer flex items-center gap-1.5"
+                  >
+                    <Camera size={13} /> Scan Shop QR
+                  </button>
+                  <button
+                    type="button"
                     onClick={() => {
                       setIsChangingShop(true);
                       setTimeout(() => manualInputRef.current?.focus(), 100);
                     }}
-                    className="text-xs font-semibold text-[var(--ink)] px-3.5 py-1.5 rounded-xl border border-[var(--line)] hover:bg-[var(--surface-muted)] transition-colors cursor-pointer flex items-center gap-1.5"
+                    className="text-xs font-semibold text-[var(--ink)] px-3.5 py-1.5 rounded-xl border border-[var(--line)] bg-[var(--surface)] hover:bg-[var(--surface-muted)] transition-colors cursor-pointer flex items-center gap-1.5"
                   >
-                    <Search size={13} /> Select Specific Counter
+                    <Search size={13} /> Search Shop
                   </button>
                 </div>
               </div>
@@ -604,6 +613,18 @@ export default function UploadDocument() {
           )}
 
         </div>
+
+        <QrScannerModal 
+          isOpen={isQrModalOpen}
+          onClose={() => setIsQrModalOpen(false)}
+          onScanSuccess={(shopId) => {
+            handleApplyShop(shopId);
+          }}
+          onManualEntryClick={() => {
+            setIsChangingShop(true);
+            setTimeout(() => manualInputRef.current?.focus(), 100);
+          }}
+        />
       </main>
     </PageTransition>
   );
