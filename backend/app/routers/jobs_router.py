@@ -143,15 +143,23 @@ async def create_job(
     db.add(job)
     db.flush()
 
-    # 2. Process and encrypt each document in the batch
-    signatures = {
-        "application/pdf": b"%PDF-",
-        "image/jpeg": b"\xff\xd8\xff",
-        "image/png": b"\x89PNG\r\n\x1a\n"
-    }
+    # 2. Process, strictly validate magic bytes, and encrypt each document
+    ALLOWED_EXTENSIONS = {".pdf", ".jpg", ".jpeg", ".png", ".docx", ".doc"}
 
     for idx, uploaded in enumerate(upload_files):
-        # Extract per-document config or fallback to global params
+        # 1. Filename & Extension Sanitization
+        raw_name = uploaded.filename or f"document_{idx+1}.pdf"
+        if "\x00" in raw_name or ".." in raw_name:
+            raise HTTPException(status_code=400, detail="Invalid filename format")
+        
+        _, ext = os.path.splitext(raw_name.lower())
+        if ext not in ALLOWED_EXTENSIONS:
+            raise HTTPException(
+                status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+                detail=f"Unsupported file format '{ext}'. Only PDF, JPEG, PNG, and Word documents are permitted."
+            )
+
+        # 2. Extract per-document config or fallback to global params
         doc_cfg = parsed_configs[idx] if idx < len(parsed_configs) else {}
         doc_copies = int(doc_cfg.get("copies", copies))
         doc_paper = str(doc_cfg.get("paperSize", paperSize))
@@ -169,26 +177,38 @@ async def create_job(
         if doc_orientation not in {"Portrait", "Landscape"}:
             raise HTTPException(status_code=422, detail="Unsupported orientation")
 
-        # Read & encrypt file content
+        # 3. Read content & enforce size bounds
         content = await uploaded.read(settings.MAX_FILE_SIZE + 1)
-        if not content or len(content) > settings.MAX_FILE_SIZE:
-            raise HTTPException(status_code=413, detail=f"Document '{uploaded.filename}' exceeds 10 MB limit")
+        if not content:
+            raise HTTPException(status_code=422, detail=f"Document '{raw_name}' is empty")
+        if len(content) > settings.MAX_FILE_SIZE:
+            raise HTTPException(status_code=413, detail=f"Document '{raw_name}' exceeds 10 MB limit")
 
-        # Determine file type
-        ctype = uploaded.content_type or "application/pdf"
+        # 4. Strict Magic Byte Header Signature Verification
         normalized_type = "pdf"
-        if "jpeg" in ctype or "jpg" in ctype or uploaded.filename.lower().endswith(('.jpg', '.jpeg')):
+        if ext in {".jpg", ".jpeg"}:
+            if not content.startswith(b"\xff\xd8\xff"):
+                raise HTTPException(status_code=422, detail=f"File '{raw_name}' does not match valid JPEG image signature")
             normalized_type = "jpg"
-        elif "png" in ctype or uploaded.filename.lower().endswith('.png'):
+        elif ext == ".png":
+            if not content.startswith(b"\x89PNG\r\n\x1a\n"):
+                raise HTTPException(status_code=422, detail=f"File '{raw_name}' does not match valid PNG image signature")
             normalized_type = "png"
-        elif uploaded.filename.lower().endswith(('.doc', '.docx')):
+        elif ext == ".pdf":
+            if not content.startswith(b"%PDF-"):
+                raise HTTPException(status_code=422, detail=f"File '{raw_name}' does not match valid PDF document signature")
+            normalized_type = "pdf"
+        elif ext in {".docx", ".doc"}:
+            if not (content.startswith(b"PK\x03\x04") or content.startswith(b"\xd0\xcf\x11\xe0")):
+                raise HTTPException(status_code=422, detail=f"File '{raw_name}' does not match valid Word document signature")
             normalized_type = "docx"
 
-        _, file_path = save_uploaded_file(content, uploaded.filename)
+        # 5. Encrypted File Storage
+        _, file_path = save_uploaded_file(content, raw_name)
 
         print_doc = PrintDocument(
             print_job_id=job.id,
-            file_name=sanitize_filename(uploaded.filename),
+            file_name=sanitize_filename(raw_name),
             file_path=file_path,
             file_type=normalized_type,
             file_size=len(content),

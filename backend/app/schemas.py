@@ -77,7 +77,10 @@ class VerifyEmailRequest(BaseModel):
     @field_validator("token")
     @classmethod
     def validate_token(cls, v: str) -> str:
-        return sanitize_text(v)
+        s = sanitize_text(v)
+        if not s or len(s) > 255:
+            raise ValueError("Invalid verification token format")
+        return s
 
 class ResendVerificationRequest(BaseModel):
     email: EmailStr
@@ -92,7 +95,10 @@ class ResetPasswordRequest(BaseModel):
     @field_validator("token")
     @classmethod
     def validate_token(cls, v: str) -> str:
-        return sanitize_text(v)
+        s = sanitize_text(v)
+        if not s or len(s) > 255:
+            raise ValueError("Invalid reset token format")
+        return s
 
 # Print Job Schemas
 class PrintSettings(BaseModel):
@@ -134,34 +140,56 @@ class PrintSettings(BaseModel):
     @classmethod
     def validate_page_range(cls, v: str) -> str:
         s = sanitize_text(v)
-        if len(s) > 50 or not re.match(r"^[A-Za-z0-9\-\, ]+$", s):
-            raise ValueError("Invalid page range format")
+        if len(s) > 50:
+            raise ValueError("Page range must not exceed 50 characters")
         return s
 
-class PrintDocumentCreate(PrintSettings):
+class PrintJobCreate(BaseModel):
     fileName: str
     fileType: str
     fileSize: int
-    printOrder: Optional[int] = 0
+    copies: int = 1
+    paperSize: str = "A4"
+    colorMode: str = "Black & White"
+    orientation: str = "Portrait"
+    pageRange: str = "All"
+    shopPublicId: Optional[str] = None
 
     @field_validator("fileName")
     @classmethod
-    def validate_filename(cls, v: str) -> str:
+    def validate_file_name(cls, v: str) -> str:
         s = sanitize_text(v)
         if not s or len(s) > 255:
-            raise ValueError("File name must be between 1 and 255 characters")
+            raise ValueError("Filename must be between 1 and 255 characters")
         return s
 
-    @field_validator("fileType")
+    @field_validator("copies")
     @classmethod
-    def validate_filetype(cls, v: str) -> str:
-        if v.lower() not in {"pdf", "jpg", "jpeg", "png", "docx", "doc"}:
-            raise ValueError("Unsupported file type")
-        return v.lower()
+    def validate_copies(cls, v: int) -> int:
+        if v < 1 or v > 100:
+            raise ValueError("Copies must be between 1 and 100")
+        return v
 
-class PrintJobCreate(BaseModel):
-    documents: List[PrintDocumentCreate]
-    shopPublicId: Optional[str] = None
+    @field_validator("paperSize")
+    @classmethod
+    def validate_paper_size(cls, v: str) -> str:
+        if v not in {"A4", "A3", "Letter", "Legal"}:
+            raise ValueError("Unsupported paper size")
+        return v
+
+    @field_validator("colorMode")
+    @classmethod
+    def validate_color_mode(cls, v: str) -> str:
+        if v not in {"Color", "Black & White"}:
+            raise ValueError("Unsupported color mode")
+        return v
+
+    @field_validator("orientation")
+    @classmethod
+    def validate_orientation(cls, v: str) -> str:
+        if v not in {"Portrait", "Landscape"}:
+            raise ValueError("Unsupported orientation")
+        return v
 
 class PrintDocumentResponse(BaseModel):
     id: str
@@ -234,16 +262,19 @@ class ShopPrinterCreate(BaseModel):
     @field_validator("printerProtocol")
     @classmethod
     def validate_protocol(cls, v: str) -> str:
-        if v.lower() not in {"socket", "ipp"}:
-            raise ValueError("Protocol must be 'socket' or 'ipp'")
-        return v.lower()
+        p = v.lower().strip()
+        if p not in {"socket", "ipp", "ipps", "lpd"}:
+            raise ValueError("Protocol must be 'socket', 'ipp', 'ipps', or 'lpd'")
+        return p
 
     @field_validator("printerEndpoint")
     @classmethod
     def validate_endpoint(cls, v: str) -> str:
-        s = sanitize_text(v)
+        s = v.strip()
         if not s or len(s) > 255:
-            raise ValueError("Printer endpoint must be valid")
+            raise ValueError("Printer endpoint must be between 1 and 255 characters")
+        if re.search(r"[;&|`$<>\r\n]", s):
+            raise ValueError("Printer endpoint contains prohibited characters")
         return s
 
 class ShopPrinterUpdate(BaseModel):
@@ -251,6 +282,38 @@ class ShopPrinterUpdate(BaseModel):
     printerProtocol: Optional[str] = None
     printerEndpoint: Optional[str] = None
     printerColorCapable: Optional[bool] = None
+
+    @field_validator("printerName")
+    @classmethod
+    def validate_name(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None:
+            s = sanitize_text(v)
+            if not s or len(s) > 100:
+                raise ValueError("Printer name must be between 1 and 100 characters")
+            return s
+        return v
+
+    @field_validator("printerProtocol")
+    @classmethod
+    def validate_protocol(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None:
+            p = v.lower().strip()
+            if p not in {"socket", "ipp", "ipps", "lpd"}:
+                raise ValueError("Protocol must be 'socket', 'ipp', 'ipps', or 'lpd'")
+            return p
+        return v
+
+    @field_validator("printerEndpoint")
+    @classmethod
+    def validate_endpoint(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None:
+            s = v.strip()
+            if not s or len(s) > 255:
+                raise ValueError("Printer endpoint must be between 1 and 255 characters")
+            if re.search(r"[;&|`$<>\r\n]", s):
+                raise ValueError("Printer endpoint contains prohibited characters")
+            return s
+        return v
 
 class ShopPrinterResponse(BaseModel):
     id: str
@@ -270,4 +333,4 @@ class PrinterTestResponse(BaseModel):
     success: bool
     printerStatus: str
     message: str
-    latencyMs: Optional[int] = None
+    latencyMs: int
