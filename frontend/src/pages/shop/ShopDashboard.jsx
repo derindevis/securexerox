@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { QRCodeSVG } from 'qrcode.react';
 import {
   ScanLine, ShieldCheck, Printer, Plus, RefreshCw, Trash2, CheckCircle2,
@@ -14,6 +14,7 @@ import { api } from '../../utils/api';
 
 export default function ShopDashboard() {
   const { jobs, currentUser, addToast } = useApp();
+  const navigate = useNavigate();
   const queue = jobs.filter(j => ['WAITING', 'PRINT_ID_GENERATED', 'SECURE_SESSION', 'PRINTING'].includes(j.status));
   const completed = jobs.filter(j => j.status === JOB_STATUS.DESTROYED);
 
