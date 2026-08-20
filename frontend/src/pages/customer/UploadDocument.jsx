@@ -221,111 +221,94 @@ export default function UploadDocument() {
             </p>
           </div>
 
-          {/* ── Destination Banner (Standee QR Connected OR Universal Mode) ── */}
-          <section className="mb-6 p-4 md:p-5 rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-2xs">
-            {targetShop ? (
-              /* Connected to Specific Counter Standee (e.g. Scanned via Phone Camera) */
-              <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-                <div className="flex items-center gap-3.5">
-                  <div className="p-2.5 rounded-xl bg-[var(--emerald-soft)] text-[var(--emerald)] shrink-0 border border-[var(--emerald)]/20">
-                    <Store size={22} />
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--emerald)] px-2 py-0.5 rounded-md bg-[var(--emerald-soft)] border border-[var(--emerald)]/20">
-                        Counter Connected
-                      </span>
-                      <strong className="text-sm font-bold text-[var(--ink)]">
-                        {targetShop.shopName}
-                      </strong>
-                      <span className="font-mono text-xs font-bold text-[var(--ink)] bg-[var(--surface-muted)] px-2 py-0.5 rounded-md border border-[var(--line)]">
-                        {targetShop.shopPublicId}
-                      </span>
-                    </div>
-                    <p className="text-xs text-[var(--ink-muted)] flex items-center gap-2 mt-0.5">
-                      <span className="text-[var(--emerald)] font-semibold">● Direct to Counter Queue</span>
-                      <span>•</span>
-                      <span>{targetShop.isColorCapable ? 'Color & B&W Spoolers Ready' : 'B&W Spooler Only'}</span>
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2 w-full md:w-auto justify-end">
-                  <button
-                    type="button"
-                    onClick={() => setIsChangingShop(true)}
-                    className="text-xs text-[var(--ink)] font-semibold hover:bg-[var(--surface-muted)] px-3 py-1.5 rounded-xl border border-[var(--line)] transition-colors cursor-pointer"
-                  >
-                    Change Counter
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleClearShop}
-                    className="text-xs text-[var(--danger)] hover:bg-[var(--danger-soft)] p-1.5 rounded-xl transition-colors cursor-pointer"
-                    title="Switch to Universal Mode (Any Counter)"
-                  >
-                    <X size={15} />
-                  </button>
-                </div>
-              </div>
-            ) : (
-              /* Universal Mode (No Shop Pre-Selected) */
-              <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-                <div className="flex items-center gap-3.5">
-                  <div className="p-2.5 rounded-xl bg-[var(--surface-muted)] text-[var(--ink)] shrink-0 border border-[var(--line)]">
+          {/* ── Mode Selector (Two distinct flows) ── */}
+          <section className="mb-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Universal Mode Card */}
+              <div 
+                onClick={handleClearShop}
+                className={`p-5 rounded-2xl border transition-all cursor-pointer flex flex-col gap-3 ${!targetShop ? 'border-[var(--ink)] bg-[var(--surface)] ring-1 ring-[var(--ink)] shadow-md' : 'border-[var(--line)] bg-transparent hover:bg-[var(--surface-muted)] opacity-70 hover:opacity-100'}`}
+              >
+                <div className="flex items-center gap-3">
+                  <div className={`p-2.5 rounded-xl shrink-0 border ${!targetShop ? 'bg-[var(--ink)] text-white border-[var(--ink)]' : 'bg-[var(--surface-muted)] text-[var(--ink)] border-[var(--line)]'}`}>
                     <Globe size={22} />
                   </div>
                   <div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--ink-muted)] px-2 py-0.5 rounded-md bg-[var(--surface-muted)] border border-[var(--line)]">
-                        Universal Mode
-                      </span>
-                      <strong className="text-sm font-semibold text-[var(--ink)]">
-                        Print at Any Xerox Counter
-                      </strong>
-                    </div>
-                    <p className="text-xs text-[var(--ink-muted)] mt-0.5">
-                      Your Print PIN can be redeemed at any registered SecureXerox shop counter.
-                    </p>
+                    <strong className="text-sm font-semibold text-[var(--ink)]">Print Anywhere (Unique Code)</strong>
+                    <p className="text-xs text-[var(--ink-muted)] mt-0.5">Generate a 6-digit PIN to release at any counter.</p>
                   </div>
                 </div>
-
-                <div className="flex items-center gap-2 w-full md:w-auto justify-end">
-                  <button
-                    type="button"
-                    onClick={() => setIsQrModalOpen(true)}
-                    className="text-xs font-semibold text-[var(--ink)] px-3.5 py-1.5 rounded-xl border border-[var(--line)] bg-[var(--surface)] hover:bg-[var(--surface-muted)] transition-colors cursor-pointer flex items-center gap-1.5"
-                  >
-                    <Camera size={13} /> Scan Shop QR
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsChangingShop(true);
-                      setTimeout(() => manualInputRef.current?.focus(), 100);
-                    }}
-                    className="text-xs font-semibold text-[var(--ink)] px-3.5 py-1.5 rounded-xl border border-[var(--line)] bg-[var(--surface)] hover:bg-[var(--surface-muted)] transition-colors cursor-pointer flex items-center gap-1.5"
-                  >
-                    <Search size={13} /> Search Shop
-                  </button>
-                </div>
+                {/* active state indicator if selected */}
+                {!targetShop && (
+                  <div className="mt-2 text-xs text-[var(--ink)] font-medium flex items-center gap-1.5">
+                    <CheckCircle2 size={14} className="text-[var(--emerald)]" /> Universal Mode Active
+                  </div>
+                )}
               </div>
-            )}
+
+              {/* Direct to Shop Card */}
+              <div 
+                onClick={() => !targetShop && setIsChangingShop(true)}
+                className={`p-5 rounded-2xl border transition-all cursor-pointer flex flex-col gap-3 ${targetShop ? 'border-[var(--emerald)] bg-[var(--surface)] ring-1 ring-[var(--emerald)] shadow-md' : 'border-[var(--line)] bg-transparent hover:bg-[var(--surface-muted)] opacity-70 hover:opacity-100'}`}
+              >
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className={`p-2.5 rounded-xl shrink-0 border ${targetShop ? 'bg-[var(--emerald-soft)] text-[var(--emerald)] border-[var(--emerald)]/20' : 'bg-[var(--surface-muted)] text-[var(--ink)] border-[var(--line)]'}`}>
+                      <Store size={22} />
+                    </div>
+                    <div>
+                      <strong className="text-sm font-semibold text-[var(--ink)]">Direct to Counter</strong>
+                      <p className="text-xs text-[var(--ink-muted)] mt-0.5">Send directly to a specific shop's print queue.</p>
+                    </div>
+                  </div>
+                </div>
+                
+                {targetShop ? (
+                  <div className="mt-auto p-3 rounded-xl bg-[var(--emerald-soft)] border border-[var(--emerald)]/20 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+                    <div>
+                      <strong className="text-sm font-bold text-[var(--ink)]">{targetShop.shopName}</strong>
+                      <span className="ml-2 font-mono text-[10px] bg-white px-1.5 py-0.5 rounded border border-[var(--line)]">{targetShop.shopPublicId}</span>
+                    </div>
+                    <button 
+                      onClick={(e) => { e.stopPropagation(); setIsChangingShop(true); }}
+                      className="text-xs font-semibold hover:underline px-2 py-1 bg-white/50 rounded-lg shrink-0 cursor-pointer"
+                    >
+                      Change Counter
+                    </button>
+                  </div>
+                ) : (
+                  <div className="mt-auto flex gap-2">
+                    <button 
+                      onClick={(e) => { e.stopPropagation(); setIsQrModalOpen(true); }}
+                      className="flex-1 sx-button py-2 text-xs justify-center shrink-0 cursor-pointer"
+                    >
+                      <Camera size={14} /> Scan QR
+                    </button>
+                    <button 
+                      onClick={(e) => { e.stopPropagation(); setIsChangingShop(true); setTimeout(() => manualInputRef.current?.focus(), 100); }}
+                      className="flex-1 sx-button py-2 text-xs justify-center shrink-0 bg-transparent text-[var(--ink)] border border-[var(--line)] hover:bg-[var(--surface-muted)] cursor-pointer"
+                    >
+                      <Search size={14} /> Search
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
 
             {/* Error Message */}
             {shopError && (
-              <div className="mt-3 p-2.5 rounded-xl bg-[var(--danger-soft)] text-[var(--danger)] text-xs flex items-center gap-2 border border-[var(--danger)]/20">
-                <AlertCircle size={14} className="shrink-0" />
+              <div className="mt-4 p-3 rounded-xl bg-[var(--danger-soft)] text-[var(--danger)] text-sm flex items-center gap-2 border border-[var(--danger)]/20">
+                <AlertCircle size={16} className="shrink-0" />
                 <span>{shopError}</span>
               </div>
             )}
 
             {/* Shop Counter Selection Drawer */}
             {isChangingShop && (
-              <div className="mt-3 pt-3 border-t border-[var(--line)] flex flex-col gap-3 animate-in fade-in duration-150">
-                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
-                  <div className="relative flex-1 sm:w-80">
-                    <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--ink-muted)]" />
+              <div className="mt-4 p-4 rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-2xs animate-in fade-in slide-in-from-top-2 duration-150">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                  <div className="relative flex-1">
+                    <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--ink-muted)]" />
                     <input
                       ref={manualInputRef}
                       type="text"
@@ -338,21 +321,21 @@ export default function UploadDocument() {
                       onKeyDown={(e) => {
                         if (e.key === 'Enter') handleApplyShop(manualShopInput);
                       }}
-                      className="w-full pl-9 pr-3 py-2 text-xs rounded-xl border border-[var(--line)] bg-[var(--canvas)] font-mono uppercase"
+                      className="w-full pl-10 pr-4 py-2.5 text-sm rounded-xl border border-[var(--line)] bg-[var(--canvas)] font-mono uppercase focus:ring-2 focus:ring-[var(--ink)] focus:border-transparent outline-none transition-all"
                     />
                   </div>
                   <div className="flex items-center gap-2">
                     <button
                       type="button"
                       onClick={() => handleApplyShop(manualShopInput)}
-                      className="sx-button text-xs py-2 px-3.5 justify-center flex-1 sm:flex-none cursor-pointer"
+                      className="sx-button text-sm py-2.5 px-4 justify-center flex-1 sm:flex-none cursor-pointer"
                     >
-                      Connect Counter
+                      Connect
                     </button>
                     <button
                       type="button"
                       onClick={() => setIsChangingShop(false)}
-                      className="text-xs text-[var(--ink-muted)] hover:text-[var(--ink)] px-2 py-1.5 cursor-pointer"
+                      className="text-sm text-[var(--ink-muted)] hover:text-[var(--ink)] px-3 py-2 cursor-pointer transition-colors"
                     >
                       Cancel
                     </button>
@@ -360,21 +343,24 @@ export default function UploadDocument() {
                 </div>
 
                 {publicShops.length > 0 && (
-                  <div className="flex flex-col gap-1.5 mt-1">
-                    <span className="text-[11px] text-[var(--ink-muted)] font-semibold">Registered Counters:</span>
-                    <div className="flex flex-wrap items-center gap-1.5 max-h-32 overflow-y-auto">
+                  <div className="flex flex-col gap-2 mt-4">
+                    <span className="text-xs text-[var(--ink-muted)] font-semibold uppercase tracking-wider">Registered Counters:</span>
+                    <div className="flex flex-wrap items-center gap-2 max-h-40 overflow-y-auto pr-2 pb-2">
                       {filteredShops.map((s) => (
                         <button
                           key={s.id}
                           type="button"
                           onClick={() => handleApplyShop(s.shopPublicId)}
-                          className="px-2.5 py-1 rounded-lg bg-[var(--surface-muted)] hover:bg-[var(--line)] text-[var(--ink)] border border-[var(--line)] transition-colors cursor-pointer text-xs font-medium flex items-center gap-1.5"
+                          className="px-3 py-2 rounded-xl bg-[var(--surface-muted)] hover:bg-[var(--line)] text-[var(--ink)] border border-[var(--line)] transition-colors cursor-pointer text-sm font-medium flex items-center gap-2"
                         >
-                          <Store size={12} className="text-[var(--emerald)]" />
+                          <Store size={14} className="text-[var(--emerald)]" />
                           <span>{s.shopName}</span>
-                          <span className="font-mono text-[10px] text-[var(--ink-muted)]">({s.shopPublicId})</span>
+                          <span className="font-mono text-xs text-[var(--ink-muted)]">({s.shopPublicId})</span>
                         </button>
                       ))}
+                      {filteredShops.length === 0 && (
+                        <span className="text-sm text-[var(--ink-muted)] py-2">No matching counters found.</span>
+                      )}
                     </div>
                   </div>
                 )}
