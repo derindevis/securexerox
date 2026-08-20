@@ -49,8 +49,6 @@ def ensure_schema_migrations():
             ("print_jobs", "color_mode", "VARCHAR"),
             ("print_jobs", "orientation", "VARCHAR"),
             ("print_jobs", "page_range", "VARCHAR"),
-            ("print_jobs", "two_sided", "VARCHAR"),
-            ("print_documents", "two_sided", "VARCHAR"),
         ]:
             try:
                 conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {col} {col_type}"))

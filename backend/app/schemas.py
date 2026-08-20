@@ -150,7 +150,7 @@ class PrintJobCreate(BaseModel):
     copies: int = 1
     paperSize: str = "A4"
     colorMode: str = "Black & White"
-    twoSided: str = "One-Sided"
+    orientation: str = "Portrait"
     pageRange: str = "All"
     shopPublicId: Optional[str] = None
 
@@ -183,11 +183,11 @@ class PrintJobCreate(BaseModel):
             raise ValueError("Unsupported color mode")
         return v
 
-    @field_validator("twoSided")
+    @field_validator("orientation")
     @classmethod
-    def validate_two_sided(cls, v: str) -> str:
-        if v not in {"One-Sided", "Two-Sided (Long Edge)", "Two-Sided (Short Edge)"}:
-            raise ValueError("Unsupported two-sided option")
+    def validate_orientation(cls, v: str) -> str:
+        if v not in {"Portrait", "Landscape"}:
+            raise ValueError("Unsupported orientation")
         return v
 
 class PrintDocumentResponse(BaseModel):
@@ -199,7 +199,7 @@ class PrintDocumentResponse(BaseModel):
     copies: int
     paperSize: str
     colorMode: str
-    twoSided: str
+    orientation: str
     pageRange: str
     printOrder: int
 

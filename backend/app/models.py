@@ -60,7 +60,7 @@ class PrintJob(Base):
     copies = Column(Integer, default=1, nullable=True)
     paper_size = Column(String, default="A4", nullable=True)
     color_mode = Column(String, default="Black & White", nullable=True)
-    two_sided = Column(String, default="One-Sided", nullable=True)
+    orientation = Column(String, default="Portrait", nullable=True)
     page_range = Column(String, default="All", nullable=True)
 
     created_at = Column(DateTime, default=datetime.utcnow)
@@ -87,7 +87,7 @@ class PrintDocument(Base):
     copies = Column(Integer, default=1)
     paper_size = Column(String, default="A4")
     color_mode = Column(String, default="Black & White")
-    two_sided = Column(String, default="One-Sided")
+    orientation = Column(String, default="Portrait")
     page_range = Column(String, default="All")
     print_order = Column(Integer, default=0)
 
