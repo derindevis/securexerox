@@ -107,20 +107,20 @@ export default function Landing() {
                 initial={{ opacity: 0, scale: 0.95, y: 20 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 transition={{ duration: 0.8, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
-                className="relative rounded-2xl overflow-hidden aspect-[4/3] lg:aspect-[16/10] border border-[var(--line)] shadow-xl group"
+                className="relative rounded-2xl overflow-hidden aspect-[4/3] lg:aspect-[16/10] border border-[var(--line)] shadow-xl group bg-[var(--ink)]"
               >
                 {/* Background visual asset */}
                 <div 
-                  className="absolute inset-0 z-0 bg-[var(--canvas)] transition-transform duration-700 group-hover:scale-105"
+                  className="absolute inset-0 z-0 transition-transform duration-1000 group-hover:scale-[1.03]"
                   style={{
-                    backgroundImage: "url('/crypto_vault_texture.jpg')",
+                    backgroundImage: "url('/glass_document.jpg')",
                     backgroundSize: "cover",
                     backgroundPosition: "center"
                   }}
                 />
                 
-                {/* Fade overlay so the asset isn't too harsh */}
-                <div className="absolute inset-0 bg-gradient-to-tr from-white/40 to-transparent z-[1]" />
+                {/* Subtle bottom gradient to ground the text badges */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent z-[1]" />
                 
                 <div className="absolute bottom-6 left-6 z-10 flex flex-col gap-2">
                   <div className="bg-white/90 backdrop-blur-md px-4 py-2 rounded-lg border border-white shadow-sm inline-flex items-center gap-2 w-max">
