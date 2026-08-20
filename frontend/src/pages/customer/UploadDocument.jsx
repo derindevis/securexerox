@@ -227,10 +227,10 @@ export default function UploadDocument() {
               {/* Universal Mode Card */}
               <div 
                 onClick={handleClearShop}
-                className={`p-5 rounded-2xl border transition-all cursor-pointer flex flex-col gap-3 ${!targetShop ? 'border-[var(--ink)] bg-[var(--surface)] ring-1 ring-[var(--ink)] shadow-md' : 'border-[var(--line)] bg-transparent hover:bg-[var(--surface-muted)] opacity-70 hover:opacity-100'}`}
+                className={`p-5 rounded-2xl border transition-all cursor-pointer flex flex-col gap-3 ${(!targetShop && !isChangingShop && !isQrModalOpen) ? 'border-[var(--ink)] bg-[var(--surface)] ring-1 ring-[var(--ink)] shadow-md' : 'border-[var(--line)] bg-transparent hover:bg-[var(--surface-muted)] opacity-70 hover:opacity-100'}`}
               >
                 <div className="flex items-center gap-3">
-                  <div className={`p-2.5 rounded-xl shrink-0 border ${!targetShop ? 'bg-[var(--ink)] text-white border-[var(--ink)]' : 'bg-[var(--surface-muted)] text-[var(--ink)] border-[var(--line)]'}`}>
+                  <div className={`p-2.5 rounded-xl shrink-0 border ${(!targetShop && !isChangingShop && !isQrModalOpen) ? 'bg-[var(--ink)] text-white border-[var(--ink)]' : 'bg-[var(--surface-muted)] text-[var(--ink)] border-[var(--line)]'}`}>
                     <Globe size={22} />
                   </div>
                   <div>
@@ -239,7 +239,7 @@ export default function UploadDocument() {
                   </div>
                 </div>
                 {/* active state indicator if selected */}
-                {!targetShop && (
+                {(!targetShop && !isChangingShop && !isQrModalOpen) && (
                   <div className="mt-2 text-xs text-[var(--ink)] font-medium flex items-center gap-1.5">
                     <CheckCircle2 size={14} className="text-[var(--emerald)]" /> Universal Mode Active
                   </div>
@@ -249,11 +249,11 @@ export default function UploadDocument() {
               {/* Direct to Shop Card */}
               <div 
                 onClick={() => !targetShop && setIsChangingShop(true)}
-                className={`p-5 rounded-2xl border transition-all cursor-pointer flex flex-col gap-3 ${targetShop ? 'border-[var(--emerald)] bg-[var(--surface)] ring-1 ring-[var(--emerald)] shadow-md' : 'border-[var(--line)] bg-transparent hover:bg-[var(--surface-muted)] opacity-70 hover:opacity-100'}`}
+                className={`p-5 rounded-2xl border transition-all cursor-pointer flex flex-col gap-3 ${(targetShop || isChangingShop || isQrModalOpen) ? 'border-[var(--emerald)] bg-[var(--surface)] ring-1 ring-[var(--emerald)] shadow-md' : 'border-[var(--line)] bg-transparent hover:bg-[var(--surface-muted)] opacity-70 hover:opacity-100'}`}
               >
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-3">
-                    <div className={`p-2.5 rounded-xl shrink-0 border ${targetShop ? 'bg-[var(--emerald-soft)] text-[var(--emerald)] border-[var(--emerald)]/20' : 'bg-[var(--surface-muted)] text-[var(--ink)] border-[var(--line)]'}`}>
+                    <div className={`p-2.5 rounded-xl shrink-0 border ${(targetShop || isChangingShop || isQrModalOpen) ? 'bg-[var(--emerald-soft)] text-[var(--emerald)] border-[var(--emerald)]/20' : 'bg-[var(--surface-muted)] text-[var(--ink)] border-[var(--line)]'}`}>
                       <Store size={22} />
                     </div>
                     <div>
