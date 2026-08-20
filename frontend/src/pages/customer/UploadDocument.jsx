@@ -114,7 +114,7 @@ export default function UploadDocument() {
         copies: 1,
         paperSize: 'A4',
         colorMode: 'Black & White',
-        orientation: 'Portrait',
+        twoSided: 'One-Sided',
         pageRange: 'All',
         isExpanded: documents.length === 0 && i === 0,
       });
@@ -482,7 +482,7 @@ export default function UploadDocument() {
 
                   {/* Expandable Per-Document Settings Sub-Form */}
                   {doc.isExpanded && (
-                    <div className="mt-3.5 pt-3.5 border-t border-[var(--line)] grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 animate-in fade-in duration-150">
+                    <div className="mt-3.5 pt-3.5 border-t border-[var(--line)] grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5 animate-in fade-in duration-150">
                       
                       {/* Copies Stepper */}
                       <div className="sx-field" style={{ margin: 0 }}>
@@ -540,6 +540,20 @@ export default function UploadDocument() {
                           {PAPER_SIZES.map((size) => (
                             <option key={size} value={size}>{size}</option>
                           ))}
+                        </select>
+                      </div>
+
+                      {/* Two Sided */}
+                      <div className="sx-field" style={{ margin: 0 }}>
+                        <label className="text-xs font-medium text-[var(--ink-muted)]">Two-Sided</label>
+                        <select
+                          value={doc.twoSided}
+                          onChange={(e) => updateDocConfig(doc.id, 'twoSided', e.target.value)}
+                          className="w-full mt-1 p-1.5 text-xs rounded-lg border border-[var(--line)] bg-[var(--canvas)] text-[var(--ink)]"
+                        >
+                          <option value="One-Sided">One-Sided</option>
+                          <option value="Two-Sided (Long Edge)">Two-Sided (Long Edge)</option>
+                          <option value="Two-Sided (Short Edge)">Two-Sided (Short Edge)</option>
                         </select>
                       </div>
 

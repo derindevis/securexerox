@@ -49,7 +49,7 @@ def to_job_response(job: PrintJob) -> PrintJobResponse:
                 copies=d.copies,
                 paperSize=d.paper_size,
                 colorMode=d.color_mode,
-                orientation=d.orientation,
+                twoSided=d.two_sided,
                 pageRange=d.page_range,
                 printOrder=d.print_order,
             ))
@@ -78,7 +78,7 @@ async def create_job(
     copies: int = Form(1),
     paperSize: str = Form("A4"),
     colorMode: str = Form("Black & White"),
-    orientation: str = Form("Portrait"),
+    twoSided: str = Form("One-Sided"),
     pageRange: str = Form("All"),
     shopPublicId: Optional[str] = Form(None),
     db: Session = Depends(get_db),
@@ -164,7 +164,7 @@ async def create_job(
         copies=int(first_cfg.get("copies", copies)),
         paper_size=str(first_cfg.get("paperSize", paperSize)),
         color_mode=str(first_cfg.get("colorMode", colorMode)),
-        orientation=str(first_cfg.get("orientation", orientation)),
+        two_sided=str(first_cfg.get("twoSided", twoSided)),
         page_range=str(first_cfg.get("pageRange", pageRange)),
     )
     db.add(job)
@@ -189,25 +189,25 @@ async def create_job(
         # 2. Extract per-document config or fallback to global params
         doc_cfg = parsed_configs[idx] if idx < len(parsed_configs) else {}
         doc_copies = int(doc_cfg.get("copies", copies))
-        doc_paper = str(doc_cfg.get("paperSize", paperSize))
-        doc_color = str(doc_cfg.get("colorMode", colorMode))
-        doc_orientation = str(doc_cfg.get("orientation", orientation))
-        doc_pagerange = str(doc_cfg.get("pageRange", pageRange))
+        doc_paper_size = str(doc_cfg.get("paperSize", paperSize))
+        doc_color_mode = str(doc_cfg.get("colorMode", colorMode))
+        doc_two_sided = str(doc_cfg.get("twoSided", twoSided))
+        doc_page_range = str(doc_cfg.get("pageRange", pageRange))
 
         # Validate bounds
         if doc_copies < 1 or doc_copies > 100:
             raise HTTPException(status_code=422, detail="Copies must be between 1 and 100")
-        if doc_paper not in {"A4", "A3", "Letter", "Legal"}:
+        if doc_paper_size not in {"A4", "A3", "Letter", "Legal"}:
             raise HTTPException(status_code=422, detail="Unsupported paper size")
-        if doc_color not in {"Color", "Black & White"}:
+        if doc_color_mode not in {"Color", "Black & White"}:
             raise HTTPException(status_code=422, detail="Unsupported color mode")
-        if doc_color == "Color" and not is_color_capable:
+        if doc_color_mode == "Color" and not is_color_capable:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Target shop '{target_shop.name}' does not support color printing."
             )
-        if doc_orientation not in {"Portrait", "Landscape"}:
-            raise HTTPException(status_code=422, detail="Unsupported orientation")
+        if doc_two_sided not in {"One-Sided", "Two-Sided (Long Edge)", "Two-Sided (Short Edge)"}:
+            raise HTTPException(status_code=422, detail="Unsupported two-sided option")
 
         # 3. Read content & enforce size bounds
         content = await uploaded.read(settings.MAX_FILE_SIZE + 1)
@@ -250,10 +250,10 @@ async def create_job(
             file_type=normalized_type,
             file_size=len(content),
             copies=doc_copies,
-            paper_size=doc_paper,
-            color_mode=doc_color,
-            orientation=doc_orientation,
-            page_range=html.escape(doc_pagerange[:50]),
+            paper_size=doc_paper_size,
+            color_mode=doc_color_mode,
+            two_sided=doc_two_sided,
+            page_range=html.escape(doc_page_range[:50]),
             print_order=idx,
         )
         db.add(print_doc)

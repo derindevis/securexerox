@@ -44,7 +44,7 @@ def to_job_response(job: PrintJob) -> PrintJobResponse:
                 copies=d.copies,
                 paperSize=d.paper_size,
                 colorMode=d.color_mode,
-                orientation=d.orientation,
+                twoSided=d.two_sided,
                 pageRange=d.page_range,
                 printOrder=d.print_order,
             ))
