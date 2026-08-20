@@ -213,6 +213,14 @@ export default function ShopDashboard() {
                         Accept & Print
                       </button>
                     )}
+                    {job.status === 'SECURE_SESSION' && (
+                      <button 
+                        onClick={() => navigate(`/shop/secure-print/${job.id}`)}
+                        className="sx-button py-1.5 px-3 text-xs justify-center shrink-0 w-full md:w-auto bg-[var(--blue)] hover:bg-[#1d4ed8] text-white border-transparent"
+                      >
+                        Resume Session
+                      </button>
+                    )}
                   </div>
                 </div>
               ))}
