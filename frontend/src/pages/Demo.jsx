@@ -83,32 +83,32 @@ export default function Demo() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
-            className="bg-white rounded-2xl border border-[var(--line)] shadow-xl p-5 sm:p-8 lg:p-10 space-y-8 relative overflow-hidden max-w-4xl mx-auto"
+            className="bg-white rounded-2xl border border-[var(--line)] shadow-xl p-3 sm:p-6 lg:p-10 space-y-6 sm:space-y-8 relative overflow-hidden max-w-4xl mx-auto w-full"
           >
             {/* Subtle top glare highlight for premium feel */}
             <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-white to-transparent opacity-80" />
             
-            <div className="flex items-center justify-between pb-4 border-b border-[var(--line)]">
-              <span className="font-mono text-xs font-bold text-[var(--ink)] uppercase tracking-wider flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-[var(--emerald)] animate-pulse shadow-[0_0_8px_rgba(22,163,74,0.6)]" />
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-[var(--line)] gap-3">
+              <span className="font-mono text-[10px] sm:text-xs font-bold text-[var(--ink)] uppercase tracking-wider flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-[var(--emerald)] animate-pulse shadow-[0_0_8px_rgba(22,163,74,0.6)] shrink-0" />
                 Live Environment Simulation
               </span>
               <button 
                 onClick={handleRotateKey}
-                className="text-[10px] font-mono text-[var(--ink-secondary)] uppercase tracking-widest hover:text-[var(--ink)] transition-colors border border-[var(--line)] px-3 py-1 rounded-full"
+                className="text-[9px] sm:text-[10px] font-mono text-[var(--ink-secondary)] uppercase tracking-widest hover:text-[var(--ink)] transition-colors border border-[var(--line)] px-3 py-1 rounded-full w-max"
               >
                 Reset Demo
               </button>
             </div>
 
-            <div className="grid md:grid-cols-2 gap-6 lg:gap-10 relative z-10">
+            <div className="grid md:grid-cols-2 gap-4 lg:gap-10 relative z-10 w-full">
               
               {/* STEP 1: Customer Mobile / Web Upload */}
-              <div className="p-5 rounded-xl bg-[var(--canvas)] border border-[var(--line)] space-y-5 flex flex-col justify-between hover:border-[var(--line-strong)] transition-colors group cursor-default shadow-sm">
+              <div className="p-3 sm:p-5 rounded-xl bg-[var(--canvas)] border border-[var(--line)] space-y-4 sm:space-y-5 flex flex-col justify-between hover:border-[var(--line-strong)] transition-colors group cursor-default shadow-sm w-full overflow-hidden">
                 <div>
-                  <div className="flex items-center justify-between text-sm font-mono mb-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between text-xs sm:text-sm font-mono mb-4 gap-2">
                     <span className="font-bold text-[var(--ink)]">1. Customer Device</span>
-                    <span className="text-[var(--emerald)] font-semibold text-[10px] uppercase tracking-wider bg-[var(--emerald-soft)] px-2.5 py-1 rounded-full">ENCRYPTED</span>
+                    <span className="text-[var(--emerald)] font-semibold text-[9px] sm:text-[10px] uppercase tracking-wider bg-[var(--emerald-soft)] px-2.5 py-1 rounded-full w-max">ENCRYPTED</span>
                   </div>
 
                   {/* File selector */}
@@ -135,36 +135,37 @@ export default function Demo() {
                   </div>
 
                   {/* QR and Passcode Display */}
-                  <div className="p-6 bg-white rounded-xl border border-[var(--line)] text-center space-y-4 shadow-sm">
+                  <div className="p-4 sm:p-6 bg-white rounded-xl border border-[var(--line)] text-center space-y-3 sm:space-y-4 shadow-sm w-full overflow-hidden">
                     {isWiped ? (
                       <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="py-8 space-y-2 text-center">
                         <CheckCircle2 size={32} className="text-[var(--emerald)] mx-auto" />
-                        <div className="font-mono text-sm font-bold text-[var(--ink)] tracking-wider">MEMORY WIPED</div>
+                        <div className="font-mono text-xs sm:text-sm font-bold text-[var(--ink)] tracking-wider">MEMORY WIPED</div>
                       </motion.div>
                     ) : (
                       <>
                         <div className="flex justify-center py-2">
                           <QRCodeSVG
                             value={`https://securexerox.app/verify/${passCode}`}
-                            size={100}
+                            size={90}
                             level="M"
+                            className="max-w-full"
                           />
                         </div>
                         <div className="flex items-center justify-center gap-2">
-                          <span className="font-mono text-2xl font-extrabold tracking-widest text-[var(--ink)]">
+                          <span className="font-mono text-xl sm:text-2xl font-extrabold tracking-widest text-[var(--ink)] truncate">
                             {passCode}
                           </span>
                           <button
                             onClick={handleCopyCode}
-                            className="p-1.5 rounded hover:bg-black/5 text-[var(--ink-secondary)] active:scale-[0.9] transition-colors"
+                            className="p-1.5 rounded hover:bg-black/5 text-[var(--ink-secondary)] active:scale-[0.9] transition-colors shrink-0"
                             title="Copy"
                           >
                             {copied ? <Check size={16} className="text-[var(--emerald)]" /> : <Copy size={16} />}
                           </button>
                         </div>
-                        <div className="text-xs font-mono text-[var(--amber)] flex items-center justify-center gap-1.5 bg-[var(--amber-soft)] w-max mx-auto px-3 py-1 rounded-full font-semibold">
-                          <Clock size={14} />
-                          <span>Purge: {formatTimer(timeLeft)}</span>
+                        <div className="text-[10px] sm:text-xs font-mono text-[var(--amber)] flex items-center justify-center gap-1.5 bg-[var(--amber-soft)] w-max max-w-full mx-auto px-3 py-1 rounded-full font-semibold">
+                          <Clock size={12} className="shrink-0" />
+                          <span className="truncate">Purge: {formatTimer(timeLeft)}</span>
                         </div>
                       </>
                     )}
@@ -174,36 +175,36 @@ export default function Demo() {
                 <button
                   onClick={handleQuickSend}
                   disabled={isWiped}
-                  className="w-full py-3 rounded-lg bg-[var(--ink)] hover:bg-black text-white text-sm font-semibold transition-all disabled:opacity-40 active:scale-[0.98] shadow-sm"
+                  className="w-full py-2.5 sm:py-3 rounded-lg bg-[var(--ink)] hover:bg-black text-white text-xs sm:text-sm font-semibold transition-all disabled:opacity-40 active:scale-[0.98] shadow-sm whitespace-normal"
                 >
                   Send Code to Terminal &rarr;
                 </button>
               </div>
 
               {/* STEP 2: Shop Clerk Counter Kiosk */}
-              <div className="p-5 rounded-xl bg-[var(--canvas)] border border-[var(--line)] space-y-5 flex flex-col justify-between hover:border-[var(--line-strong)] transition-colors cursor-default shadow-sm">
+              <div className="p-3 sm:p-5 rounded-xl bg-[var(--canvas)] border border-[var(--line)] space-y-4 sm:space-y-5 flex flex-col justify-between hover:border-[var(--line-strong)] transition-colors cursor-default shadow-sm w-full overflow-hidden">
                 <div>
-                  <div className="flex items-center justify-between text-sm font-mono mb-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between text-xs sm:text-sm font-mono mb-4 gap-2">
                     <span className="font-bold text-[var(--ink)]">2. Shop Terminal</span>
-                    <span className="text-[var(--ink-secondary)] font-semibold text-[10px] uppercase tracking-wider border border-[var(--line-strong)] bg-white px-2.5 py-1 rounded-full">READ-ONLY</span>
+                    <span className="text-[var(--ink-secondary)] font-semibold text-[9px] sm:text-[10px] uppercase tracking-wider border border-[var(--line-strong)] bg-white px-2.5 py-1 rounded-full w-max">READ-ONLY</span>
                   </div>
 
                   {/* Code input */}
                   <div className="space-y-1 mb-6">
-                    <div className="flex gap-2">
+                    <div className="flex flex-wrap sm:flex-nowrap gap-2 w-full">
                       <input
                         type="text"
-                        placeholder="ENTER 6-DIGIT CODE"
+                        placeholder="CODE"
                         value={kioskCode}
                         onChange={(e) => {
                           setKioskCode(e.target.value.toUpperCase());
                           setIsConnected(e.target.value.toUpperCase() === passCode);
                         }}
-                        className="flex-1 min-w-0 px-3 sm:px-4 py-3 rounded-lg border border-[var(--line-strong)] bg-white text-xs sm:text-sm font-mono uppercase tracking-widest focus:outline-none focus:border-[var(--ink)] transition-colors shadow-sm"
+                        className="flex-1 min-w-[100px] w-full sm:w-auto px-3 sm:px-4 py-2.5 sm:py-3 rounded-lg border border-[var(--line-strong)] bg-white text-xs sm:text-sm font-mono uppercase tracking-widest focus:outline-none focus:border-[var(--ink)] transition-colors shadow-sm"
                       />
                       <button
                         onClick={() => setIsConnected(kioskCode === passCode)}
-                        className="px-4 sm:px-6 py-3 rounded-lg bg-[var(--ink)] hover:bg-black text-white text-xs sm:text-sm font-semibold transition-transform active:scale-[0.95] shadow-sm whitespace-nowrap"
+                        className="flex-none px-4 sm:px-6 py-2.5 sm:py-3 rounded-lg bg-[var(--ink)] hover:bg-black text-white text-xs sm:text-sm font-semibold transition-transform active:scale-[0.95] shadow-sm whitespace-nowrap"
                       >
                         Verify
                       </button>
@@ -211,7 +212,7 @@ export default function Demo() {
                   </div>
 
                   {/* Terminal Status Window */}
-                  <div className="p-6 bg-white rounded-xl border border-[var(--line)] min-h-[180px] flex flex-col justify-center text-center shadow-sm">
+                  <div className="p-4 sm:p-6 bg-white rounded-xl border border-[var(--line)] min-h-[140px] sm:min-h-[180px] flex flex-col justify-center text-center shadow-sm w-full overflow-hidden">
                     {isPrinting ? (
                       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="py-4 space-y-3">
                         <Printer size={32} className="text-[var(--emerald)] animate-bounce mx-auto" />
@@ -244,9 +245,9 @@ export default function Demo() {
                   </div>
                 </div>
 
-                <div className="text-[11px] font-mono flex justify-between uppercase tracking-widest text-[var(--ink-secondary)] bg-white p-3 rounded-lg border border-[var(--line)]">
-                  <span>DRM: <strong className="text-[var(--ink)]">WATERMARKED</strong></span>
-                  <span>Disk: <strong className="text-[var(--danger)]">0 KB</strong></span>
+                <div className="text-[9px] sm:text-[11px] font-mono flex flex-col sm:flex-row justify-between uppercase tracking-widest text-[var(--ink-secondary)] bg-white p-2 sm:p-3 rounded-lg border border-[var(--line)] gap-2">
+                  <span className="truncate">DRM: <strong className="text-[var(--ink)]">WATERMARKED</strong></span>
+                  <span className="truncate">Disk: <strong className="text-[var(--danger)]">0 KB</strong></span>
                 </div>
               </div>
 
