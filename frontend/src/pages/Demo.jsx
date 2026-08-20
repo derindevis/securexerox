@@ -145,7 +145,7 @@ export default function Demo() {
                       <>
                         <div className="flex justify-center py-2">
                           <QRCodeSVG
-                            value={`https://securexerox.app/verify/${passCode}`}
+                            value={`https://zeroleakprint.app/verify/${passCode}`}
                             size={90}
                             level="M"
                             className="max-w-full"

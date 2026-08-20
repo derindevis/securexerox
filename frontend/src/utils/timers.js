@@ -1,5 +1,5 @@
 // ============================================
-// SecureXerox — Timer & Countdown Utilities
+// ZeroLeak Print — Timer & Countdown Utilities
 // ============================================
 
 import { useState, useEffect, useCallback, useRef } from 'react';

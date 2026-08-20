@@ -78,7 +78,7 @@ export default function Landing() {
 
               <FadeInItem>
                 <p className="text-base text-[var(--ink-secondary)] leading-relaxed max-w-[45ch]">
-                  SecureXerox streams encrypted confidential files directly into print shop RAM with an automatic 10-minute shredder. No files left on local hard drives.
+                  ZeroLeak Print streams encrypted confidential files directly into print shop RAM with an automatic 30-minute shredder. No files left on local hard drives.
                 </p>
               </FadeInItem>
 
@@ -145,7 +145,7 @@ export default function Landing() {
                   <div className="text-[10px] md:text-xs text-[var(--ink-secondary)] mt-1 uppercase tracking-widest">Disk Storage</div>
                 </div>
                 <div className="p-4 rounded-xl bg-white border border-[var(--line)] shadow-sm hover:shadow-md transition-shadow cursor-default">
-                  <div className="text-xl md:text-2xl font-bold text-[var(--emerald)]">10 Min</div>
+                  <div className="text-xl md:text-2xl font-bold text-[var(--emerald)]">30 Min</div>
                   <div className="text-[10px] md:text-xs text-[var(--ink-secondary)] mt-1 uppercase tracking-widest">Access Window</div>
                 </div>
                 <div className="p-4 rounded-xl bg-white border border-[var(--line)] shadow-sm hover:shadow-md transition-shadow cursor-default">
@@ -189,7 +189,7 @@ export default function Landing() {
               </FadeInItem>
               <FadeInItem>
                 <p className="text-[var(--ink-secondary)] leading-relaxed text-sm md:text-base">
-                  Every print shop computer is a potential data leak. SecureXerox bypasses the hard drive entirely, guaranteeing your files are shredded the moment the paper drops.
+                  Every print shop computer is a potential data leak. ZeroLeak Print bypasses the hard drive entirely, guaranteeing your files are shredded the moment the paper drops.
                 </p>
               </FadeInItem>
             </FadeInStagger>
@@ -254,7 +254,7 @@ export default function Landing() {
                   <Trash2 size={20} />
                 </div>
                 <div className="space-y-2 mt-8 md:mt-0">
-                  <h3 className="text-lg font-semibold text-[var(--ink)] tracking-tight">10-Minute Shredder</h3>
+                  <h3 className="text-lg font-semibold text-[var(--ink)] tracking-tight">30-Minute Shredder</h3>
                   <p className="text-[var(--ink-secondary)] text-[13px] leading-relaxed">
                     Even if the print is cancelled, the payload self-destructs globally in exactly 600 seconds.
                   </p>
@@ -272,7 +272,7 @@ export default function Landing() {
                 Ready to secure your documents?
               </h2>
               <p className="text-white/70 text-[15px] max-w-[50ch] mx-auto leading-relaxed">
-                Stop emailing sensitive tax forms to `printshop123@gmail.com`. Use SecureXerox for zero-trace local printing.
+                Stop emailing sensitive tax forms to `printshop123@gmail.com`. Use ZeroLeak Print for zero-trace local printing.
               </p>
               <Link 
                 to="/login" 
@@ -287,7 +287,7 @@ export default function Landing() {
           <footer className="pt-4 pb-12 flex flex-col sm:flex-row items-center justify-between gap-6 text-xs text-[var(--ink-muted)]">
             <div className="flex items-center gap-2 font-mono font-semibold">
               <ShieldCheck size={16} className="text-[var(--emerald)]" />
-              <span>SECUREXEROX © 2026</span>
+              <span>ZEROLEAK PRINT © 2026</span>
             </div>
             <div className="flex items-center gap-6 font-medium">
               <Link to="/login" className="hover:text-[var(--ink)] transition-colors">Sign In</Link>

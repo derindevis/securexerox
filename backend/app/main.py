@@ -60,7 +60,7 @@ async def lifespan(app: FastAPI):
 is_production = settings.APP_ENV.lower() == "production"
 
 app = FastAPI(
-    title="SecureXerox API",
+    title="ZeroLeak Print API",
     description="Zero-Trust Ephemeral Document Printing Platform",
     version="1.0.0",
     docs_url=None if is_production else "/docs",
@@ -227,7 +227,7 @@ app.include_router(shop_public_router.router)
 
 @app.get("/")
 def root():
-    return {"status": "online", "platform": "SecureXerox Zero-Trust Print Engine"}
+    return {"status": "online", "platform": "ZeroLeak Print Zero-Trust Print Engine"}
 
 @app.get("/healthz")
 def healthz():

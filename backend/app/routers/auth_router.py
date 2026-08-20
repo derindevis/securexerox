@@ -116,7 +116,7 @@ def google_auth(auth_data: GoogleAuthRequest, request: Request, db: Session = De
         try:
             req_headers = {
                 "Authorization": f"Bearer {raw_token}",
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) SecureXerox/1.0",
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) ZeroLeak Print/1.0",
             }
             if anon_key:
                 req_headers["apikey"] = anon_key
@@ -135,7 +135,7 @@ def google_auth(auth_data: GoogleAuthRequest, request: Request, db: Session = De
             try:
                 req = urllib.request.Request(
                     f"https://oauth2.googleapis.com/tokeninfo?id_token={raw_token}",
-                    headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) SecureXerox/1.0"}
+                    headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) ZeroLeak Print/1.0"}
                 )
                 with urllib.request.urlopen(req, timeout=5) as response:
                     if response.status == 200:
@@ -200,7 +200,7 @@ def google_auth(auth_data: GoogleAuthRequest, request: Request, db: Session = De
             log_audit_event("AUTH_GOOGLE_SIGNIN_UNREGISTERED", f"Google signin attempt for unregistered user ({email_clean})", ip_address=client_ip, status_code=404)
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="No SecureXerox account found for this Google email. Please sign up first.",
+                detail="No ZeroLeak Print account found for this Google email. Please sign up first.",
             )
         if not user.is_verified:
             user.is_verified = True

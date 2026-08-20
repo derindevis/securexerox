@@ -25,7 +25,7 @@ export default function Navbar() {
           <span className="sx-brand__mark">
             <ShieldCheck size={16} />
           </span>
-          SecureXerox
+          ZeroLeak Print
         </Link>
 
         {/* Desktop Links */}

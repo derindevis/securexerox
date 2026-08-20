@@ -1,5 +1,5 @@
 // ============================================
-// SecureXerox — Central Application Context (Production API Integrated)
+// ZeroLeak Print — Central Application Context (Production API Integrated)
 // ============================================
 
 import { createContext, useContext, useReducer, useCallback, useRef, useEffect } from 'react';

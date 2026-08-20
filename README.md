@@ -1,6 +1,6 @@
-# SecureXerox — Encrypted Zero-Trust Document Handoff Vault
+# ZeroLeak Print — Encrypted Zero-Trust Document Handoff Vault
 
-**SecureXerox** is an encrypted, zero-trust document handoff and secure printing vault application. It allows customers to hand off sensitive files (contracts, identity documents, passports, financial records) to print shops via short-lived, ephemeral **Print IDs** without leaving permanent copies on print shop machines.
+**ZeroLeak Print** is an encrypted, zero-trust document handoff and secure printing vault application. It allows customers to hand off sensitive files (contracts, identity documents, passports, financial records) to print shops via short-lived, ephemeral **Print IDs** without leaving permanent copies on print shop machines.
 
 ---
 

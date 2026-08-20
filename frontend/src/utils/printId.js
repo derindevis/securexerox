@@ -1,5 +1,5 @@
 // ============================================
-// SecureXerox — Print ID Utilities
+// ZeroLeak Print — Print ID Utilities
 // ============================================
 
 // Characters used for Print ID generation (excluding confusing ones like 0/O, 1/I/l)

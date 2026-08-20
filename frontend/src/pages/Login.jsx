@@ -102,10 +102,10 @@ export default function Login() {
           {/* ── Header ── */}
           <p className="sx-kicker">Secure Access</p>
           <h1 className="sx-title" style={{ fontSize: 'clamp(2rem, 4vw, 3.2rem)', marginBottom: '0.25rem' }}>
-            {mode === 'signin' ? <>Log in to <em>SecureXerox</em></> : <>Create your <em>account</em></>}
+            {mode === 'signin' ? <>Log in to <em>ZeroLeak Print</em></> : <>Create your <em>account</em></>}
           </h1>
           <p className="sx-lede" style={{ marginBottom: '1.5rem' }}>
-            {mode === 'signin' ? 'Connect to SecureXerox with:' : 'Connect to SecureXerox with:'}
+            {mode === 'signin' ? 'Connect to ZeroLeak Print with:' : 'Connect to ZeroLeak Print with:'}
           </p>
 
           {/* ── Role Selection ── */}
@@ -249,7 +249,7 @@ export default function Login() {
           {/* ── Mode Switch Footer ── */}
           <p className="text-center text-sm text-[var(--ink-muted)] mt-5">
             {mode === 'signin' ? (
-              <>New to SecureXerox?{' '}
+              <>New to ZeroLeak Print?{' '}
                 <button
                   type="button"
                   onClick={() => { setMode('signup'); setPassword(''); }}

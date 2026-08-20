@@ -1,5 +1,5 @@
 // ============================================
-// SecureXerox — System Constants & UI Helpers
+// ZeroLeak Print — System Constants & UI Helpers
 // ============================================
 
 // Status constants for print job lifecycle

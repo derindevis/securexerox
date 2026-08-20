@@ -305,7 +305,7 @@ export default function ShopDashboard() {
                 <div className="md:col-span-2 p-5 rounded-xl border border-[var(--line)] bg-[var(--surface)] text-center text-xs text-[var(--ink-muted)]">
                   <Server size={22} className="mx-auto text-[var(--ink-muted)] mb-2" />
                   <p className="font-medium text-[var(--ink)]">No Physical Printers Registered</p>
-                  <p className="mt-1">SecureXerox will use the internal virtual loopback spooler until you add a physical device.</p>
+                  <p className="mt-1">ZeroLeak Print will use the internal virtual loopback spooler until you add a physical device.</p>
                   <button
                     type="button"
                     onClick={() => setIsAddModalOpen(true)}
@@ -339,7 +339,7 @@ export default function ShopDashboard() {
               id="printer-name"
               required
               type="text"
-              placeholder="e.g. Front Counter Xerox B&W"
+              placeholder="e.g. Front Counter Printer B&W"
               value={newPrinter.printerName}
               onChange={(e) => setNewPrinter({ ...newPrinter, printerName: e.target.value })}
             />
