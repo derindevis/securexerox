@@ -119,12 +119,19 @@ export default function QrScannerModal({ isOpen, onClose, onScanSuccess, onManua
         isMounted = false;
         clearTimeout(timer);
         if (scannerRef.current) {
-          if (scannerRef.current.isScanning) {
-            scannerRef.current.stop().catch(() => {}).then(() => {
-              scannerRef.current?.clear();
-            });
-          } else {
-            scannerRef.current?.clear();
+          try {
+            // Unconditionally try to stop, catching both sync and async errors
+            // since scannerRef.current.isScanning might be undefined.
+            const stopPromise = scannerRef.current.stop();
+            if (stopPromise && stopPromise.then) {
+              stopPromise.catch(() => {}).finally(() => {
+                try { scannerRef.current.clear(); } catch (e) {}
+              });
+            } else {
+              try { scannerRef.current.clear(); } catch (e) {}
+            }
+          } catch (e) {
+            try { scannerRef.current.clear(); } catch (e2) {}
           }
         }
       };
