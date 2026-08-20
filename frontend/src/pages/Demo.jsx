@@ -113,7 +113,7 @@ export default function Demo() {
 
                   {/* File selector */}
                   <div className="space-y-2 mb-6">
-                    <div className="grid grid-cols-3 gap-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                       {SAMPLE_FILES.map((f) => (
                         <button
                           key={f.id}
@@ -121,14 +121,14 @@ export default function Demo() {
                             setSelectedFile(f);
                             handleRotateKey();
                           }}
-                          className={`p-3 rounded-lg border text-left transition-all active:scale-[0.95] ${
+                          className={`p-2.5 sm:p-3 rounded-lg border text-left transition-all active:scale-[0.95] ${
                             selectedFile.id === f.id
                               ? 'bg-white border-[var(--ink)] text-[var(--ink)] shadow-md font-medium'
                               : 'bg-white/60 border-[var(--line)] text-[var(--ink-secondary)] hover:bg-white hover:border-[var(--line-strong)]'
                           }`}
                         >
-                          <div className="text-[11px] font-bold truncate">{f.name.split('_')[0]}</div>
-                          <div className="text-[10px] mt-1 opacity-80">{f.size}</div>
+                          <div className="text-[10px] sm:text-[11px] font-bold truncate">{f.name.split('_')[0]}</div>
+                          <div className="text-[9px] sm:text-[10px] mt-1 opacity-80">{f.size}</div>
                         </button>
                       ))}
                     </div>
@@ -199,11 +199,11 @@ export default function Demo() {
                           setKioskCode(e.target.value.toUpperCase());
                           setIsConnected(e.target.value.toUpperCase() === passCode);
                         }}
-                        className="flex-1 px-4 py-3 rounded-lg border border-[var(--line-strong)] bg-white text-sm font-mono uppercase tracking-widest focus:outline-none focus:border-[var(--ink)] transition-colors shadow-sm"
+                        className="flex-1 min-w-0 px-3 sm:px-4 py-3 rounded-lg border border-[var(--line-strong)] bg-white text-xs sm:text-sm font-mono uppercase tracking-widest focus:outline-none focus:border-[var(--ink)] transition-colors shadow-sm"
                       />
                       <button
                         onClick={() => setIsConnected(kioskCode === passCode)}
-                        className="px-6 py-3 rounded-lg bg-[var(--ink)] hover:bg-black text-white text-sm font-semibold transition-transform active:scale-[0.95] shadow-sm"
+                        className="px-4 sm:px-6 py-3 rounded-lg bg-[var(--ink)] hover:bg-black text-white text-xs sm:text-sm font-semibold transition-transform active:scale-[0.95] shadow-sm whitespace-nowrap"
                       >
                         Verify
                       </button>
@@ -223,13 +223,13 @@ export default function Demo() {
                         <div className="text-xs text-[var(--ink-secondary)] font-mono">Memory zeroed from terminal</div>
                       </motion.div>
                     ) : isConnected ? (
-                      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-5">
-                        <div className="text-sm font-mono font-bold text-[var(--emerald)] truncate px-2 bg-[var(--emerald-soft)] py-2 rounded-lg">
+                      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-5 flex flex-col min-w-0">
+                        <div className="text-sm font-mono font-bold text-[var(--emerald)] truncate px-2 bg-[var(--emerald-soft)] py-2 rounded-lg w-full">
                           ✓ {selectedFile.name}
                         </div>
                         <button
                           onClick={handleExecutePrint}
-                          className="w-full py-3.5 rounded-lg bg-[var(--emerald)] hover:bg-[#15803D] text-white font-bold text-xs font-mono tracking-widest transition-transform active:scale-[0.97] flex items-center justify-center gap-2 shadow-md shadow-emerald-500/20"
+                          className="w-full py-3.5 rounded-lg bg-[var(--emerald)] hover:bg-[#15803D] text-white font-bold text-xs font-mono tracking-widest transition-transform active:scale-[0.97] flex items-center justify-center gap-2 shadow-md shadow-emerald-500/20 whitespace-nowrap"
                         >
                           <Printer size={16} />
                           <span>PRINT & SHRED</span>
