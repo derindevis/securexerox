@@ -10,7 +10,7 @@ export default function Navbar() {
   const [open, setOpen] = useState(false);
 
   const links = !isAuthenticated
-    ? [['Explore', '/']]
+    ? [['Explore', '/'], ['Demo', '/demo']]
     : currentUser?.role === 'customer'
     ? [['Overview', '/customer/dashboard'], ['New print', '/customer/upload'], ['My jobs', '/customer/jobs']]
     : [['Overview', '/shop/dashboard'], ['Verify ID', '/shop/print'], ['Queue', '/shop/queue'], ['History', '/shop/history']];

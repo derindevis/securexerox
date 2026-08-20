@@ -1,28 +1,13 @@
-import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { QRCodeSVG } from 'qrcode.react';
 import { motion, useReducedMotion } from 'motion/react';
 import {
   ShieldCheck,
   Lock,
   ArrowRight,
   Printer,
-  Clock,
-  CheckCircle2,
-  Trash2,
-  Copy,
-  Check,
-  KeyRound,
-  Zap
+  Trash2
 } from 'lucide-react';
 import PageTransition from '../components/common/PageTransition';
-
-// Real-world sensitive document choices
-const SAMPLE_FILES = [
-  { id: 'passport', name: 'Passport_US_Renewal.pdf', pages: 2, size: '1.8 MB' },
-  { id: 'contract', name: 'Employment_NDA_Final.pdf', pages: 4, size: '2.1 MB' },
-  { id: 'tax', name: 'IRS_Tax_Form_1040.pdf', pages: 6, size: '1.4 MB' },
-];
 
 // Logos for infinite marquee
 const LOGOS = [
@@ -66,62 +51,6 @@ const FadeInItem = ({ children, className = "" }) => {
 };
 
 export default function Landing() {
-  // ─── Customer Upload / Pass State ───
-  const [selectedFile, setSelectedFile] = useState(SAMPLE_FILES[0]);
-  const [passCode, setPassCode] = useState('SX-8492');
-  const [timeLeft, setTimeLeft] = useState(599); // 10:00 countdown
-  const [copied, setCopied] = useState(false);
-
-  // ─── Print Shop Kiosk State ───
-  const [kioskCode, setKioskCode] = useState('');
-  const [isConnected, setIsConnected] = useState(false);
-  const [isPrinting, setIsPrinting] = useState(false);
-  const [isWiped, setIsWiped] = useState(false);
-
-  // Countdown timer
-  useEffect(() => {
-    if (isWiped) return;
-    const timer = setInterval(() => {
-      setTimeLeft((t) => (t > 0 ? t - 1 : 0));
-    }, 1000);
-    return () => clearInterval(timer);
-  }, [isWiped]);
-
-  const formatTimer = (s) => {
-    const min = Math.floor(s / 60);
-    const sec = s % 60;
-    return `${min.toString().padStart(2, '0')}:${sec.toString().padStart(2, '0')}`;
-  };
-
-  const handleRotateKey = () => {
-    setIsWiped(false);
-    setIsPrinting(false);
-    setIsConnected(false);
-    setKioskCode('');
-    setPassCode(`SX-${Math.floor(1000 + Math.random() * 9000)}`);
-    setTimeLeft(600);
-  };
-
-  const handleCopyCode = () => {
-    navigator.clipboard?.writeText(passCode);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1500);
-  };
-
-  const handleQuickSend = () => {
-    setKioskCode(passCode);
-    setIsConnected(true);
-  };
-
-  const handleExecutePrint = () => {
-    setIsPrinting(true);
-    setTimeout(() => {
-      setIsPrinting(false);
-      setIsWiped(true);
-      setIsConnected(false);
-    }, 1400);
-  };
-
   return (
     <PageTransition>
       <main className="sx-page overflow-hidden">
@@ -172,176 +101,36 @@ export default function Landing() {
               </FadeInItem>
             </FadeInStagger>
 
-            {/* Right: Live Interactive Counter Handoff Simulator */}
+            {/* Right: High-End Visual Asset (Replaces Simulator) */}
             <div className="lg:col-span-7">
               <motion.div 
                 initial={{ opacity: 0, scale: 0.95, y: 20 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 transition={{ duration: 0.8, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
-                className="bg-white rounded-2xl border border-[var(--line)] shadow-xl p-5 sm:p-6 lg:p-8 space-y-6 relative overflow-hidden"
+                className="relative rounded-2xl overflow-hidden aspect-[4/3] lg:aspect-[16/10] border border-[var(--line)] shadow-xl group"
               >
-                {/* Subtle top glare highlight for premium feel */}
-                <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-white to-transparent opacity-80" />
+                {/* Background visual asset */}
+                <div 
+                  className="absolute inset-0 z-0 bg-[var(--canvas)] transition-transform duration-700 group-hover:scale-105"
+                  style={{
+                    backgroundImage: "url('/crypto_vault_texture.jpg')",
+                    backgroundSize: "cover",
+                    backgroundPosition: "center"
+                  }}
+                />
                 
-                <div className="flex items-center justify-between pb-4 border-b border-[var(--line)]">
-                  <span className="font-mono text-[11px] font-bold text-[var(--ink)] uppercase tracking-wider flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-[var(--emerald)] animate-pulse shadow-[0_0_8px_rgba(22,163,74,0.6)]" />
-                    Interactive Counter Simulator
-                  </span>
-                  <span className="text-[10px] font-mono text-[var(--ink-secondary)] uppercase tracking-widest hidden sm:block">
-                    Live Demo
-                  </span>
-                </div>
-
-                <div className="grid sm:grid-cols-2 gap-4 lg:gap-6 relative z-10">
-                  
-                  {/* STEP 1: Customer Mobile / Web Upload */}
-                  <div className="p-4 rounded-xl bg-[var(--canvas)] border border-[var(--line)] space-y-4 flex flex-col justify-between hover:border-[var(--line-strong)] transition-colors group cursor-default">
-                    <div>
-                      <div className="flex items-center justify-between text-xs font-mono mb-3">
-                        <span className="font-bold text-[var(--ink)]">1. Customer Device</span>
-                        <span className="text-[var(--emerald)] font-semibold text-[9px] uppercase tracking-wider bg-[var(--emerald-soft)] px-2 py-0.5 rounded-full">ENCRYPTED</span>
-                      </div>
-
-                      {/* File selector */}
-                      <div className="space-y-1.5 mb-4">
-                        <div className="grid grid-cols-3 gap-1.5">
-                          {SAMPLE_FILES.map((f) => (
-                            <button
-                              key={f.id}
-                              onClick={() => {
-                                setSelectedFile(f);
-                                handleRotateKey();
-                              }}
-                              className={`p-2 rounded-lg border text-left transition-all active:scale-[0.95] ${
-                                selectedFile.id === f.id
-                                  ? 'bg-white border-[var(--ink)] text-[var(--ink)] shadow-sm'
-                                  : 'bg-white/60 border-[var(--line)] text-[var(--ink-secondary)] hover:bg-white hover:border-[var(--line-strong)]'
-                              }`}
-                            >
-                              <div className="text-[10px] font-bold truncate">{f.name.split('_')[0]}</div>
-                              <div className="text-[9px] mt-0.5 opacity-80">{f.size}</div>
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* QR and Passcode Display */}
-                      <div className="p-4 bg-white rounded-xl border border-[var(--line)] text-center space-y-3 shadow-sm">
-                        {isWiped ? (
-                          <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="py-6 space-y-1 text-center">
-                            <CheckCircle2 size={24} className="text-[var(--emerald)] mx-auto" />
-                            <div className="font-mono text-xs font-bold text-[var(--ink)] tracking-wider">MEMORY WIPED</div>
-                          </motion.div>
-                        ) : (
-                          <>
-                            <div className="flex justify-center py-1">
-                              <QRCodeSVG
-                                value={`https://securexerox.app/verify/${passCode}`}
-                                size={76}
-                                level="M"
-                              />
-                            </div>
-                            <div className="flex items-center justify-center gap-1.5">
-                              <span className="font-mono text-xl font-extrabold tracking-widest text-[var(--ink)]">
-                                {passCode}
-                              </span>
-                              <button
-                                onClick={handleCopyCode}
-                                className="p-1 rounded hover:bg-black/5 text-[var(--ink-secondary)] active:scale-[0.9]"
-                                title="Copy"
-                              >
-                                {copied ? <Check size={14} className="text-[var(--emerald)]" /> : <Copy size={14} />}
-                              </button>
-                            </div>
-                            <div className="text-[10px] font-mono text-[var(--amber)] flex items-center justify-center gap-1.5 bg-[var(--amber-soft)] w-max mx-auto px-2 py-0.5 rounded-full font-semibold">
-                              <Clock size={11} />
-                              <span>Purge: {formatTimer(timeLeft)}</span>
-                            </div>
-                          </>
-                        )}
-                      </div>
-                    </div>
-
-                    <button
-                      onClick={handleQuickSend}
-                      disabled={isWiped}
-                      className="w-full py-2.5 rounded-lg bg-[var(--ink)] hover:bg-black text-white text-xs font-semibold transition-all disabled:opacity-40 active:scale-[0.98] shadow-sm"
-                    >
-                      Send Code to Kiosk &rarr;
-                    </button>
+                {/* Fade overlay so the asset isn't too harsh */}
+                <div className="absolute inset-0 bg-gradient-to-tr from-white/40 to-transparent z-[1]" />
+                
+                <div className="absolute bottom-6 left-6 z-10 flex flex-col gap-2">
+                  <div className="bg-white/90 backdrop-blur-md px-4 py-2 rounded-lg border border-white shadow-sm inline-flex items-center gap-2 w-max">
+                    <Lock size={14} className="text-[var(--emerald)]" />
+                    <span className="text-xs font-mono font-bold text-[var(--ink)] tracking-widest">AES-GCM-256</span>
                   </div>
-
-                  {/* STEP 2: Shop Clerk Counter Kiosk */}
-                  <div className="p-4 rounded-xl bg-[var(--canvas)] border border-[var(--line)] space-y-4 flex flex-col justify-between hover:border-[var(--line-strong)] transition-colors cursor-default">
-                    <div>
-                      <div className="flex items-center justify-between text-xs font-mono mb-3">
-                        <span className="font-bold text-[var(--ink)]">2. Shop Terminal</span>
-                        <span className="text-[var(--ink-secondary)] font-semibold text-[9px] uppercase tracking-wider border border-[var(--line-strong)] bg-white px-2 py-0.5 rounded-full">READ-ONLY</span>
-                      </div>
-
-                      {/* Code input */}
-                      <div className="space-y-1 mb-4">
-                        <div className="flex gap-2">
-                          <input
-                            type="text"
-                            placeholder="CODE"
-                            value={kioskCode}
-                            onChange={(e) => {
-                              setKioskCode(e.target.value.toUpperCase());
-                              setIsConnected(e.target.value.toUpperCase() === passCode);
-                            }}
-                            className="flex-1 px-3 py-2 rounded-lg border border-[var(--line-strong)] bg-white text-xs font-mono uppercase tracking-widest focus:outline-none focus:border-[var(--ink)] transition-colors shadow-sm"
-                          />
-                          <button
-                            onClick={() => setIsConnected(kioskCode === passCode)}
-                            className="px-4 py-2 rounded-lg bg-[var(--ink)] hover:bg-black text-white text-xs font-semibold transition-transform active:scale-[0.95] shadow-sm"
-                          >
-                            Verify
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* Terminal Status Window */}
-                      <div className="p-4 bg-white rounded-xl border border-[var(--line)] min-h-[140px] flex flex-col justify-center text-center shadow-sm">
-                        {isPrinting ? (
-                          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="py-2 space-y-2">
-                            <Printer size={22} className="text-[var(--emerald)] animate-bounce mx-auto" />
-                            <div className="font-mono text-[11px] font-bold text-[var(--ink)] tracking-widest">SPOOLING STREAM...</div>
-                          </motion.div>
-                        ) : isWiped ? (
-                          <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="py-2 space-y-1">
-                            <div className="font-mono text-xs font-bold text-[var(--emerald)]">✓ PRINT EXECUTED</div>
-                            <div className="text-[10px] text-[var(--ink-secondary)] font-mono">Memory zeroed from terminal</div>
-                          </motion.div>
-                        ) : isConnected ? (
-                          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-3">
-                            <div className="text-xs font-mono font-bold text-[var(--emerald)] truncate px-2">
-                              ✓ {selectedFile.name}
-                            </div>
-                            <button
-                              onClick={handleExecutePrint}
-                              className="w-full py-2.5 rounded-lg bg-[var(--emerald)] hover:bg-[#15803D] text-white font-bold text-[11px] font-mono tracking-widest transition-transform active:scale-[0.97] flex items-center justify-center gap-2 shadow-sm"
-                            >
-                              <Printer size={13} />
-                              <span>PRINT & SHRED</span>
-                            </button>
-                          </motion.div>
-                        ) : (
-                          <div className="text-[10px] text-[var(--ink-muted)] font-mono flex flex-col items-center gap-2">
-                            <span className="w-1.5 h-1.5 rounded-full bg-[var(--line-strong)] animate-pulse" />
-                            Waiting for code verification...
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="text-[10px] font-mono flex justify-between uppercase tracking-widest text-[var(--ink-secondary)]">
-                      <span>DRM: <strong className="text-[var(--ink)]">WATERMARKED</strong></span>
-                      <span>Disk: <strong className="text-[var(--danger)]">0 KB</strong></span>
-                    </div>
+                  <div className="bg-white/90 backdrop-blur-md px-4 py-2 rounded-lg border border-white shadow-sm inline-flex items-center gap-2 w-max">
+                    <ShieldCheck size={14} className="text-[var(--emerald)]" />
+                    <span className="text-xs font-mono font-bold text-[var(--ink)] tracking-widest">END-TO-END ENCRYPTED</span>
                   </div>
-
                 </div>
               </motion.div>
             </div>
@@ -479,7 +268,6 @@ export default function Landing() {
           <section className="py-20 relative rounded-[3rem] overflow-hidden bg-[var(--ink)] text-center px-6 shadow-xl">
             <div className="absolute inset-0 bg-gradient-to-t from-[var(--emerald)]/20 to-transparent pointer-events-none opacity-50" />
             <div className="relative z-10 max-w-2xl mx-auto space-y-8">
-              {/* Removed sx-title to avoid color: var(--ink) override, applied text-white explicitly */}
               <h2 className="text-4xl md:text-5xl font-serif text-white font-normal tracking-tight leading-tight">
                 Ready to secure your documents?
               </h2>
